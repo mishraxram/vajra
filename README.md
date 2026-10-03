@@ -7,6 +7,7 @@
 <p align="center">Search → fetch → preserve exact passages → audit the trail</p>
 
 [![CI](https://github.com/mishraxram/vajra/actions/workflows/ci.yml/badge.svg)](https://github.com/mishraxram/vajra/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/mishraxram/vajra)](https://github.com/mishraxram/vajra/releases/latest)
 [![MIT License](https://img.shields.io/github/license/mishraxram/vajra)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
@@ -18,7 +19,7 @@ Requires Python 3.10 or newer. Install `uv` once, then install VAJRA directly fr
 
 ```powershell
 python -m pip install uv
-uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
+uv tool install --upgrade --from git+https://github.com/mishraxram/vajra.git vajra-research
 if ($LASTEXITCODE -eq 0) {
   $env:PATH = "$(uv tool dir --bin);$env:PATH"
   vajra welcome
@@ -31,7 +32,7 @@ On macOS/Linux/WSL, run:
 
 ```bash
 python3 -m pip install uv
-uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research && export PATH="$(uv tool dir --bin):$PATH" && vajra welcome
+uv tool install --upgrade --from git+https://github.com/mishraxram/vajra.git vajra-research && export PATH="$(uv tool dir --bin):$PATH" && vajra welcome
 ```
 
 Restart the terminal if `vajra` is not on `PATH`, then:

@@ -33,7 +33,7 @@ def _doctor_report(store: ResearchStore, *, include_agent_reach: bool = True) ->
         from mcp.server import MCPServer  # noqa: F401
         mcp = {"status": "configured", "transport": "stdio"}
     except ImportError:
-        mcp = {"status": "missing_required_dependency", "install": "uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research"}
+        mcp = {"status": "missing_required_dependency", "install": "uv tool install --upgrade --from git+https://github.com/mishraxram/vajra.git vajra-research"}
     checks = {"vajra": {"status": "ok", "version": __version__}, "database": database,
               "search": {"status": search_status, "message": search_message, "network": "not probed"},
               "agent_reach": agent_reach, "mcp": mcp,
@@ -200,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
             from vajra.mcp_server import create_server
             create_server(store).run()
         except ImportError:
-            print("MCP dependency is missing. Reinstall Vajra: uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research", file=sys.stderr)
+            print("MCP dependency is missing. Update Vajra: uv tool install --upgrade --from git+https://github.com/mishraxram/vajra.git vajra-research", file=sys.stderr)
             return 2
         return 0
     return 2

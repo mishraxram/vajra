@@ -9,7 +9,7 @@ Core web research is free and keyless: it uses public DDGS search backends and d
 If `uv` is not installed yet, install it once with `python -m pip install uv`. Then:
 
 ```powershell
-uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
+uv tool install --upgrade --from git+https://github.com/mishraxram/vajra.git vajra-research
 if ($LASTEXITCODE -eq 0) {
   $env:PATH = "$(uv tool dir --bin);$env:PATH"
   vajra welcome
@@ -18,6 +18,7 @@ vajra --version
 ```
 
 This installs the `vajra` executable plus its search and MCP runtime dependencies, adds the uv executable directory to this PowerShell session, then runs the branded welcome check. In an interactive terminal `vajra welcome` prompts for a research question; in a non-interactive agent terminal it displays the banner and exits cleanly. Restart the terminal if `vajra` is not found in later sessions.
+The `--upgrade` flag also replaces an older already-installed VAJRA version; check the result with `vajra --version`.
 
 Run `vajra doctor` only when `vajra welcome` reports a setup problem or you need its full diagnostics; doctor also checks the optional Agent Reach integration and may take longer.
 

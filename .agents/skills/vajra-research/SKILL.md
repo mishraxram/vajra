@@ -15,10 +15,11 @@ Use the actual VAJRA CLI or MCP tools to do the work. Never present a mock repor
 ## Install or set up VAJRA when asked
 
 - An explicit request to install/setup VAJRA authorizes the installation. Do not ask whether to proceed or ask which OS when the host can be detected.
-- Follow the matching OS commands in [INSTALL.md](https://github.com/mishraxram/vajra/blob/master/INSTALL.md). Install `uv` only if missing; install the distribution as `vajra-research` (the executable is `vajra`). Keep `uv tool dir --bin` on the current process PATH or invoke the executable by its full path.
+- Follow the matching OS commands in [INSTALL.md](https://github.com/mishraxram/vajra/blob/master/INSTALL.md). Install `uv` only if missing; install/update the distribution as `vajra-research` with `uv tool install --upgrade --from git+https://github.com/mishraxram/vajra.git vajra-research` (the executable is `vajra`). Keep `uv tool dir --bin` on the current process PATH or invoke the executable by its full path.
 - If the user asks for all/supported AI CLIs, install the shared skill with `npx skills add mishraxram/vajra --skill vajra-research --global --yes --agent '*'`. Configure this client's native MCP entry only when MCP integration is requested and documented.
 - Verify with `vajra --version` and `vajra welcome`; this checks the installed command and core local setup without doing a live search. In non-interactive shells, do not wait for user input. Run the slower, full `vajra doctor` only if welcome reports a problem or the user asks for diagnostics.
 - Do not claim success unless the commands succeed. If an installed hook/tool blocks execution or a prerequisite is missing, stop and give the shortest actionable command or error. Reply with one concise status line; do not echo the install walkthrough after success.
+- VAJRA general research never needs `OPENAI_API_KEY`, `TAVILY_API_KEY`, or another model/search API key. Do not ask the user to create one. Never invent research output when a command failed; report the actual tool error and offer a safe terminal command. Do not recommend deleting or renaming AI-client plugins to work around a hook error.
 
 ## Run research
 
@@ -34,7 +35,7 @@ Use the actual VAJRA CLI or MCP tools to do the work. Never present a mock repor
 When VAJRA is unavailable and the user asked to install it, follow the platform-specific install-and-welcome instructions in [INSTALL.md](https://github.com/mishraxram/vajra/blob/master/INSTALL.md). Otherwise, show the short install command and let the user decide.
 
 ```powershell
-uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
+uv tool install --upgrade --from git+https://github.com/mishraxram/vajra.git vajra-research
 ```
 
 If `uv` is not installed, first use the official `uv` installation method for the user's OS. Do not silently claim an installation worked; verify `vajra --version` afterward. Client-specific MCP setup is in [AGENT_INTEGRATIONS.md](https://github.com/mishraxram/vajra/blob/master/AGENT_INTEGRATIONS.md).

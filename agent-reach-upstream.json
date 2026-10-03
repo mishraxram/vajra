@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/Panniantong/Agent-Reach",
+  "observed_main_commit": "a19a171fa980a0785849596492e0af4db800c82f",
+  "observed_commit_date": "2026-09-16",
+  "latest_release_observed": "v1.5.0",
+  "license": "MIT",
+  "python_requires": ">=3.10",
+  "locally_installed_version": "1.5.0",
+  "retrieved_at": "2026-10-03",
+  "update_policy": "Review upstream source, license, health/parity tests, and security changes before updating; never auto-overwrite the user's Agent Reach install."
+}
+

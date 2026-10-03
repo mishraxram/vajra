@@ -1,8 +1,7 @@
 # Benchmarks
 
-No performance or quality benchmark has been run, and no claim that Vajra is better than Agent Reach, GPT Researcher, STORM, Exa, Tavily, or another system is made.
+A deterministic scorer is available in [`benchmarks/README.md`](benchmarks/README.md). It checks exact evidence-span coverage against a versioned human-adjudicated corpus, quote/citation trace integrity, structural claim-to-evidence links, and recorded latency.
 
-The first benchmark should fix a versioned set of questions and manually labeled answer/evidence spans. Record the exact code commit, query budget, model (if any), provider version, and retrieval date. Compare citation URL validity, quote-span correctness, evidence coverage, independent-source count, counterevidence recall, abstention on unsupported claims, freshness, end-to-end latency, and measured provider/model cost. Agent Reach capability/doctor checks are connectivity checks and cannot alone be compared with a full report-generation workflow.
+**Quality and comparative benchmarks have not been run.** No human-adjudicated corpus is present. Agent Reach's current capability/health interface is not equivalent to Vajra's report workflow, so the requested full-workflow comparison cannot be made fairly with the current integrations. Do not claim that Vajra is better or that these structural metrics establish factual accuracy.
 
-Do not use vendor/LLM-generated answers as gold labels without separate human adjudication. Current benchmark status: **NOT RUN**.
-
+For a future comparison, freeze a reviewed query set and gold evidence spans. Record code commit, retrieval date, query budget, provider/backends and versions, source access, configuration, machine, and raw traces. Measure exact evidence coverage and integrity, evidence diversity and independence, counterevidence recall, unsupported assertions after human entailment review, freshness, failure recovery, latency, and cost. Compare only systems given equivalent search/source access and budgets. Have human adjudicators review claims and conflicting evidence; vendor-generated answers are not gold labels without independent adjudication.

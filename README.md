@@ -11,6 +11,8 @@
 - `vajra replay ID` reconstructs the recorded JSON trace. `vajra audit ID` checks citation IDs and quoted spans against the stored source text.
 - `vajra mcp` starts the optional local stdio MCP server (`pip install -e ".[mcp]"`). The MCP server is read-only apart from running an explicitly requested research job.
 
+`benchmarks/score.py` scores saved traces against a human-adjudicated corpus for exact evidence coverage and trace integrity; it does not score factual truth or semantic entailment. See `benchmarks/README.md`.
+
 ## Install and run
 
 ```powershell

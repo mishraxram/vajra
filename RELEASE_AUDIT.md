@@ -1,6 +1,6 @@
 # Release audit
 
-**Decision: NOT READY / NOT RELEASED.** This is an initial, usable research-workbench build. The evidence below records what ran on 2026-10-03 and keeps unresolved release criteria visible. Do not describe this build as production-ready.
+**Decision: NOT READY / NOT RELEASED.** This is an initial, usable research-workbench build. Base environment, research, build, and security-scan observations are from 2026-10-03; benchmark-scorer work and the final 13-test reruns are from 2026-10-04. Unresolved release criteria remain visible. Do not describe this build as production-ready.
 
 ## Verified
 
@@ -11,7 +11,7 @@
 | Agent Reach preservation/parity | PASS for adapter boundary | Installed v1.5.0; current main commit `a19a171fa980a0785849596492e0af4db800c82f`; its 16 channel keys and status/backend/tier data are read dynamically. Parity test passed. Doctor reported 5/16 channels healthy in this environment. Agent Reach is a capability/health integration here, not a generic retrieval API. |
 | Upstream update check | PASS | `vajra upstream-check` completed read-only and reported installed v1.5.0 is current on 2026-10-03. No update was installed. |
 | Package/lock | PASS | `uv lock --check` resolved 36 packages without lock drift. `uv build` successfully produced wheel and sdist. Fresh isolated `uv sync --all-extras --frozen` installed successfully and `vajra --version` returned 0.1.0. |
-| Tests | PASS, limited | 10 tests passed in the existing environment and again in a fresh locked environment. Includes Agent Reach parity, evidence replay/audit, fetch validation, security checks, and real MCP stdio client calls. This is not comprehensive production qualification. |
+| Tests | PASS, limited | All 13 tests passed in the existing environment and again in a fresh locked environment on 2026-10-04. Includes Agent Reach parity, evidence replay/audit, fetch validation, security checks, benchmark-scorer behavior, and real MCP stdio client calls. This is not comprehensive production qualification. |
 | MCP | PASS, stdio only | SDK 2.2.0; subprocess test connected with the official client and exercised tools. No network transport or third-party agent configuration was changed. |
 | CLI/doctor | PASS, limited | Doctor ran and reported `AVAILABLE`; database and optional dependencies were configured. Search network is explicitly `not probed`; 5/16 Agent Reach channels were healthy. Doctor does not assert test status or claim truth verification. |
 | Live research smoke | PASS, limited | DDGS search and direct fetch produced a trace with fetched sources/passages; citation audit reported valid. Provider behavior varied and some metasearch backends throttled/failed. This is one smoke workflow, not evidence of broad research quality. |
@@ -25,6 +25,7 @@
 |---|---|---|
 | Full research intelligence | NOT IMPLEMENTED | No semantic claim extraction, entailment, source authority scoring, independent-source adjudication, temporal validity judgment, general contradiction resolution, or final evidence-based judgment. Current “claims” are source excerpts. |
 | Provider routing/fallback | PARTIAL | DDGS search plus direct HTTP retrieval work; Agent Reach health is preserved. There is no capability-based multi-provider content router or functioning alternate content provider fallback. |
+| Benchmark harness | PASS, limited | Deterministic scorer is implemented and unit-tested for exact evidence spans and trace integrity. No quality benchmark has run because no human-adjudicated corpus exists. |
 | Comparative benchmark | NOT RUN | No fair Agent Reach-vs-Vajra full-workflow benchmark was run. Agent Reach exposes capability-specific integrations and health checks, not a comparable generic report-generation workflow. Do not infer quality, coverage, or superiority. |
 | Performance/resource benchmarks | NOT RUN | No reproducible end-to-end latency, CPU, memory, network, cache, cost, throughput, or failure-recovery study. |
 | Broad adversarial security audit | PARTIAL | Unit/security tests cover selected URLs, spans, and MCP boundaries. No independent penetration test, fuzzing, complete prompt-injection campaign, DNS-rebinding defense, or sandboxing review. URL validation checks resolved addresses but retains a DNS time-of-check/time-of-use risk. |

@@ -15,8 +15,28 @@
 
 ## Install and run
 
+### Install the experimental build from GitHub
+
+The source repository is public. This is an early experimental build and is **not production-ready**; search can fail and its evidence excerpts do not verify factual truth.
+
 ```powershell
 python -m pip install uv
+uv tool install --from "git+https://github.com/mishraxram/vajra.git" --with "ddgs==9.16.0" --with "mcp==2.2.0" vajra
+uv tool update-shell
+vajra doctor
+```
+
+Restart PowerShell if `vajra` is not found after updating the tool path. Then run:
+
+```powershell
+vajra research "Your actual research question" --mode standard
+```
+
+Reports are saved under `%LOCALAPPDATA%\Vajra\reports`. The PyPI package has not been published; this command installs directly from GitHub.
+
+### Install from a local checkout
+
+```powershell
 uv sync --all-extras --frozen
 uv run vajra doctor
 uv run vajra research "What is the current evidence on ...?" --mode standard

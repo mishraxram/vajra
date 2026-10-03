@@ -81,10 +81,11 @@ Restart the client and ask it to research a question with Vajra. The server expo
 
 ## What it does
 
-- Plans bounded primary and counterevidence searches for `fast`, `standard`, `deep`, and `forensic` runs.
+- Plans bounded primary and counterevidence searches for `fast`, `standard`, `deep`, and `forensic` runs, scheduled concurrently through capped async worker pools.
 - Searches with Agent Reach's configured Exa MCP tool through `mcporter` and DDGS in the same run; DDGS falls back across DuckDuckGo, Bing, and Brave. Missing/broken providers are recorded and do not prevent the other provider from working.
 - Accepts actual text collected by Agent Reach platform skills/tools (GitHub, YouTube, social channels, web, and others) through MCP or `--sources-file`; every imported source retains its URL, tool/channel attribution, content hash, and exact auditable evidence spans.
-- Fetches candidate public pages with URL, redirect, response-size, and timeout controls; extracts text without running page scripts.
+- Fetches candidate public pages with URL, redirect, response-size, and deadline controls; extracts headings, lists, and paragraphs without running page scripts and drops hidden/navigation clutter.
+- Treats retrieved text as untrusted data, removes invisible control characters, detects common access challenges, and stops without browser spoofing or CAPTCHA bypass. MCP replay reads large source bodies in bounded overlapping chunks.
 - Stores fetched text, exact quote offsets, metadata, hashes, query history, failures, and a replayable JSON trace in SQLite.
 - Marks a run `partial` when a query/fetch fails or it collects fewer than the mode's source minimum. It never labels a one-source standard run complete.
 - Dynamically reads Agent Reach's current channels and health. Vajra uses configured Exa search directly and lets compatible AI agents pass platform-specific Agent Reach results into the same evidence/audit pipeline; it does not install channels or take over credentials.

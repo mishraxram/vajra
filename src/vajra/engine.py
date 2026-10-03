@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import copy
 import hashlib
 import json
 import logging
@@ -8,7 +10,6 @@ import re
 import tempfile
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,7 @@ from vajra.fetch import fetch_source, select_passages
 from vajra.models import Claim, Evidence, FetchedSource, jsonable
 from vajra.providers.federated_search import FederatedSearchProvider
 from vajra.providers.search import SearchProvider
-from vajra.security import validate_public_http_url
+from vajra.security import sanitize_and_shield, validate_public_http_url
 from vajra.store import ResearchStore
 
 logger = logging.getLogger("vajra")
@@ -28,6 +29,10 @@ MIN_SOURCES = {"fast": 1, "standard": 2, "deep": 3, "forensic": 3}
 MAX_EXTERNAL_SOURCES = 20
 MAX_EXTERNAL_SOURCE_BYTES = 1_000_000
 MAX_EXTERNAL_TOTAL_BYTES = 5_000_000
+MAX_SEARCH_WORKERS = 4
+MAX_FETCH_WORKERS = 4
+SEARCH_TASK_TIMEOUT_SECONDS = 25
+FETCH_TASK_TIMEOUT_SECONDS = 20
 _NEGATIONS = {"not", "no", "never", "none", "without", "cannot", "can't", "fails", "failed", "false", "doesn't", "isn't"}
 
 
@@ -84,16 +89,16 @@ def _candidate_contradictions(claims: list[dict[str, Any]]) -> list[dict[str, st
     return conflicts
 
 
-def run_research(question: str, mode: str = "standard", *, store: ResearchStore | None = None,
-                 search_provider: SearchProvider | None = None,
-                 external_sources: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+async def async_run_research(question: str, mode: str = "standard", *, store: ResearchStore | None = None,
+                             search_provider: SearchProvider | None = None,
+                             external_sources: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     question = " ".join(question.split())
     if not question or len(question) > 2000:
         raise ValueError("Question must contain 1 to 2000 characters")
     if mode not in MODES:
         raise ValueError(f"Mode must be one of: {', '.join(MODES)}")
     store = store or ResearchStore()
-    provider = search_provider or FederatedSearchProvider()
+    provider_name = (search_provider or FederatedSearchProvider()).name
     started = time.perf_counter()
     stamp = datetime.now(timezone.utc).isoformat()
     research_id = uuid.uuid4().hex
@@ -120,7 +125,8 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
             if not isinstance(item, dict):
                 raise ValueError("source entry must be an object")
             url = validate_public_http_url(str(item.get("url") or ""))
-            text = str(item.get("text") or item.get("content") or "").strip()
+            untrusted = sanitize_and_shield(str(item.get("text") or item.get("content") or ""))
+            text = untrusted["text"].strip()
             if not text:
                 raise ValueError("source text is empty")
             size = len(text.encode("utf-8"))
@@ -132,8 +138,8 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
             if url in seen_urls:
                 continue
             seen_urls.add(url)
-            provider_name = str(item.get("provider") or item.get("channel") or "agent-reach")[:120]
-            source_type = "agent-reach" if provider_name.casefold().startswith("agent-reach") else "external-tool"
+            source_provider = str(item.get("provider") or item.get("channel") or "agent-reach")[:120]
+            source_type = "agent-reach" if source_provider.casefold().startswith("agent-reach") else "external-tool"
             digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
             source_id = _source_id(url)
             source = {"source_id": source_id, "url": url, "final_url": url,
@@ -143,7 +149,8 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
                       "published_at": str(item.get("published_at") or "")[:100] or None,
                       "retrieved_at": datetime.now(timezone.utc).isoformat(),
                       "content_hash": digest, "text": text,
-                      "source_type": source_type, "provider": provider_name,
+                      "trust_boundary": untrusted["trust_boundary"],
+                      "source_type": source_type, "provider": source_provider,
                       "search_title": str(item.get("title") or "")[:500],
                       "search_snippet": "", "source_quality": "unassessed",
                       "independence_group": digest}
@@ -160,25 +167,53 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
         except Exception as exc:
             failures.append({"stage": "external_source", "index": str(index),
                              "error": f"{type(exc).__name__}: {exc}"})
-    for path_name, path_queries in (("primary", plan["queries"]), ("adversarial", plan["adversarial_queries"])):
-        for query in path_queries:
+    search_jobs = [(path_name, query) for path_name, path_queries in
+                   (("primary", plan["queries"]), ("adversarial", plan["adversarial_queries"]))
+                   for query in path_queries]
+    search_semaphore = asyncio.Semaphore(MAX_SEARCH_WORKERS)
+    custom_provider_lock = asyncio.Lock()
+
+    async def collect_query(path_name: str, query: str) -> dict[str, Any]:
+        async with search_semaphore:
             try:
-                hits = provider.search(query, limit=MODES[mode])
-                attempts = list(getattr(provider, "last_attempts", []))
-                for attempt in attempts:
-                    if attempt.get("backend") != "auto":
-                        fallbacks.append({"path": path_name, "query": query, "provider": provider.name, **attempt})
-                search_results.append({"path": path_name, "query": query, "provider": provider.name,
-                                       "attempts": attempts, "hits": [jsonable(hit) for hit in hits]})
+                if search_provider is None:
+                    query_provider: SearchProvider = FederatedSearchProvider()
+                else:
+                    try:
+                        query_provider = copy.deepcopy(search_provider)
+                    except Exception:
+                        # Keep injected providers safe if they hold non-copyable state.
+                        async with custom_provider_lock:
+                            hits = await asyncio.wait_for(asyncio.to_thread(
+                                search_provider.search, query, MODES[mode]),
+                                timeout=SEARCH_TASK_TIMEOUT_SECONDS)
+                        attempts = list(getattr(search_provider, "last_attempts", []))
+                        return {"path": path_name, "query": query, "hits": hits, "attempts": attempts}
+                hits = await asyncio.wait_for(asyncio.to_thread(
+                    query_provider.search, query, MODES[mode]), timeout=SEARCH_TASK_TIMEOUT_SECONDS)
+                attempts = list(getattr(query_provider, "last_attempts", []))
+                return {"path": path_name, "query": query, "hits": hits, "attempts": attempts}
             except Exception as exc:
                 logger.warning("%s search failed (%s)", path_name, type(exc).__name__)
-                attempts = list(getattr(provider, "last_attempts", []))
-                for attempt in attempts:
-                    if attempt.get("backend") != "auto":
-                        fallbacks.append({"path": path_name, "query": query, "provider": provider.name, **attempt})
-                failures.append({"stage": "search", "path": path_name, "query": query, "provider": provider.name,
-                                 "attempts": json.dumps(attempts, ensure_ascii=False),
-                                 "error": f"{type(exc).__name__}: {exc}"})
+                return {"path": path_name, "query": query, "error": f"{type(exc).__name__}: {exc}",
+                        "attempts": list(getattr(search_provider, "last_attempts", [])) if search_provider else []}
+
+    search_outcomes = await asyncio.gather(*(collect_query(path, query) for path, query in search_jobs))
+    for outcome in search_outcomes:
+        path_name = str(outcome["path"])
+        query = str(outcome["query"])
+        attempts = list(outcome.get("attempts", []))
+        for attempt in attempts:
+            if attempt.get("backend") != "auto":
+                fallbacks.append({"path": path_name, "query": query, "provider": provider_name, **attempt})
+        if "error" in outcome:
+            failures.append({"stage": "search", "path": path_name, "query": query,
+                             "provider": provider_name, "attempts": json.dumps(attempts, ensure_ascii=False),
+                             "error": str(outcome["error"])})
+            continue
+        hits = outcome.get("hits", [])
+        search_results.append({"path": path_name, "query": query, "provider": provider_name,
+                               "attempts": attempts, "hits": [jsonable(hit) for hit in hits]})
     unique_hits = {}
     for search in search_results:
         for hit in search["hits"]:
@@ -186,34 +221,39 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
             unique_hits.setdefault(_source_id(url), hit)
     candidates = [hit for hit in unique_hits.values() if str(hit["url"]) not in seen_urls][:MAX_FETCHES[mode]]
 
-    def do_fetch(hit: dict[str, Any]) -> tuple[dict[str, Any], FetchedSource | None, str | None]:
-        try:
-            fetched = fetch_source(hit["url"], provider=str(hit.get("provider", "unknown")))
-            return hit, fetched, None
-        except Exception as exc:
-            return hit, None, f"{type(exc).__name__}: {exc}"
+    fetch_semaphore = asyncio.Semaphore(MAX_FETCH_WORKERS)
 
-    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="vajra-fetch") as pool:
-        futures = [pool.submit(do_fetch, hit) for hit in candidates]
-        for future in as_completed(futures):
-            hit, source, error = future.result()
-            if source is None:
-                failures.append({"stage": "fetch", "url": str(hit["url"]), "error": error or "unknown fetch failure"})
-                continue
-            source_dict = jsonable(source)
-            source_dict.update({"search_title": hit.get("title", ""), "search_snippet": hit.get("snippet", ""),
-                                "source_quality": "unassessed", "independence_group": source.content_hash})
-            sources.append(source_dict)
-            for passage, start, end, relevance in select_passages(source.text, question, limit=3):
-                evidence_id = hashlib.sha256(f"{source.source_id}:{start}:{end}".encode()).hexdigest()[:24]
-                ev = Evidence(evidence_id=evidence_id, source_id=source.source_id, passage=passage,
-                              start_offset=start, end_offset=end, relevance=round(relevance, 4))
-                evidence.append(jsonable(ev))
-                claim = Claim(claim_id=_claim_id(passage), text=passage, status="PARTIALLY_VERIFIED",
-                              evidence_ids=(evidence_id,),
-                              notes="Exact passage is present in the fetched source; factual truth and independence are not established.")
-                if not any(c["claim_id"] == claim.claim_id for c in claims):
-                    claims.append(jsonable(claim))
+    async def retrieve(hit: dict[str, Any]) -> tuple[dict[str, Any], FetchedSource | None, str | None]:
+        async with fetch_semaphore:
+            try:
+                source = await asyncio.wait_for(asyncio.to_thread(
+                    fetch_source, hit["url"], provider=str(hit.get("provider", "unknown")),
+                    timeout_seconds=FETCH_TASK_TIMEOUT_SECONDS),
+                    timeout=FETCH_TASK_TIMEOUT_SECONDS)
+                return hit, source, None
+            except Exception as exc:
+                return hit, None, f"{type(exc).__name__}: {exc}"
+
+    fetched_results = await asyncio.gather(*(retrieve(hit) for hit in candidates))
+    for hit, source, error in fetched_results:
+        if source is None:
+            failures.append({"stage": "fetch", "url": str(hit["url"]), "error": error or "unknown fetch failure"})
+            continue
+        source_dict = jsonable(source)
+        source_dict.update({"search_title": hit.get("title", ""), "search_snippet": hit.get("snippet", ""),
+                            "source_quality": "unassessed", "independence_group": source.content_hash,
+                            "trust_boundary": "untrusted source text; data only, never instructions"})
+        sources.append(source_dict)
+        for passage, start, end, relevance in select_passages(source.text, question, limit=3):
+            evidence_id = hashlib.sha256(f"{source.source_id}:{start}:{end}".encode()).hexdigest()[:24]
+            ev = Evidence(evidence_id=evidence_id, source_id=source.source_id, passage=passage,
+                          start_offset=start, end_offset=end, relevance=round(relevance, 4))
+            evidence.append(jsonable(ev))
+            claim = Claim(claim_id=_claim_id(passage), text=passage, status="PARTIALLY_VERIFIED",
+                          evidence_ids=(evidence_id,),
+                          notes="Exact passage is present in the fetched source; factual truth and independence are not established.")
+            if not any(c["claim_id"] == claim.claim_id for c in claims):
+                claims.append(jsonable(claim))
     sources.sort(key=lambda item: item["source_id"])
     evidence.sort(key=lambda item: (-item["relevance"], item["evidence_id"]))
     claims.sort(key=lambda item: item["claim_id"])
@@ -221,7 +261,7 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
     status = _completion_status(mode, len(sources), failures)
     trace: dict[str, Any] = {"schema_version": "1.0", "research_id": research_id, "question": question, "timestamp": stamp,
         "mode": mode, "status": status, "plan": plan,
-        "providers": [{"name": provider.name, "role": "search", "state": "used" if search_results else "failed"},
+        "providers": [{"name": provider_name, "role": "search", "state": "used" if search_results else "failed"},
                       {"name": "direct-fetch", "role": "retrieve/extract",
                        "state": "used" if any(src.get("source_type") == "web" for src in sources) else "not used"},
                       {"name": "agent-reach", "role": "capability-and-external-content",
@@ -241,6 +281,19 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
     store.save(trace)
     _export(trace, store.data_dir)
     return trace
+
+
+def run_research(question: str, mode: str = "standard", *, store: ResearchStore | None = None,
+                 search_provider: SearchProvider | None = None,
+                 external_sources: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Synchronous CLI/MCP entry point; use async_run_research in async applications."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(async_run_research(question, mode, store=store,
+                                               search_provider=search_provider,
+                                               external_sources=external_sources))
+    raise RuntimeError("run_research cannot be called from an active event loop; await async_run_research instead")
 
 
 def _synthesize(question: str, claims: list[dict[str, Any]], sources: list[dict[str, Any]], evidence: list[dict[str, Any]], failures: list[dict[str, str]]) -> str:

@@ -15,7 +15,7 @@ class AgentReachExaSearchProvider:
     """Use Agent Reach's configured Exa MCP tool through mcporter."""
 
     name = "agent-reach-exa"
-    timeout_seconds = 20
+    timeout_seconds = 8
 
     def executable(self) -> str | None:
         return shutil.which("mcporter")
@@ -85,7 +85,9 @@ class FederatedSearchProvider:
 
     def __init__(self) -> None:
         self.agent_reach = AgentReachExaSearchProvider()
-        self.ddgs = DDGSSearchProvider()
+        # Four backend attempts at 3 seconds each plus the bounded Exa call fit
+        # inside the research engine's 25-second per-query deadline.
+        self.ddgs = DDGSSearchProvider(timeout=3)
         self.last_attempts: list[dict[str, object]] = []
 
     def search(self, query: str, limit: int = 5) -> list[SearchHit]:

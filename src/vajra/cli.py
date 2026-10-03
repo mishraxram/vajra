@@ -50,13 +50,14 @@ def _doctor(store: ResearchStore) -> int:
     return 0 if result["checks"]["database"]["status"] == "ok" else 2
 
 
-_LOGO_GLYPHS = {
-    "V": ("██    ██", "██    ██", "██    ██", " ██  ██ ", " ██  ██ ", "  ████  "),
-    "A": ("  ████  ", " ██  ██ ", " ██  ██ ", " ██████ ", " ██  ██ ", " ██  ██ "),
-    "J": ("   █████", "      ██", "      ██", "      ██", "██    ██", " ██████ "),
-    "R": ("██████  ", "██    ██", "██    ██", "██████  ", "██  ██  ", "██    ██"),
-}
-_BANNER = tuple("  ".join(_LOGO_GLYPHS[letter][row] for letter in "VAJRA") for row in range(6))
+_BANNER = (
+    "██╗   ██╗ █████╗  ██████╗██████╗  █████╗",
+    "██║   ██║██╔══██╗ ╚══██╔╝██╔══██╗██╔══██╗",
+    "██║   ██║███████║    ██║ ██████╔╝███████║",
+    "╚██╗ ██╔╝██╔══██║██   ██║ ██╔══██╗██╔══██║",
+    " ╚████╔╝ ██║  ██║╚█████╔╝ ██║  ██║██║  ██║",
+    "  ╚═══╝  ╚═╝  ╚═╝ ╚════╝  ╚═╝  ╚═╝╚═╝  ╚═╝",
+)
 
 
 def _show_banner() -> None:
@@ -103,7 +104,7 @@ def _welcome(store: ResearchStore) -> int:
     checks = health["checks"]
     database_ok = checks["database"]["status"] == "ok"
     if health["overall"] == "CONFIGURED":
-        print(f"[✓] VAJRA installed successfully (v{__version__}). Core research components are configured.\n")
+        print(f"[✓] VAJRA installation verified (v{__version__}). Core research components are configured.\n")
     else:
         print(f"[!] VAJRA v{__version__} is installed, but setup needs attention.")
         for name in ("database", "search", "mcp"):

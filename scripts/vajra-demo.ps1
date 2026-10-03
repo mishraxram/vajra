@@ -4,12 +4,12 @@
 )
 
 $ErrorActionPreference = 'Stop'
-Write-Host '██╗   ██╗ █████╗  ██████╗██████╗  █████╗' -ForegroundColor White
-Write-Host '██║   ██║██╔══██╗██╔════╝██╔══██╗██╔══██╗' -ForegroundColor White
-Write-Host '██║   ██║███████║██║     ██████╔╝███████║' -ForegroundColor White
-Write-Host '╚██╗ ██╔╝██╔══██║██║     ██╔══██╗██╔══██║' -ForegroundColor White
-Write-Host ' ╚████╔╝ ██║  ██║╚██████╗██║  ██║██║  ██║' -ForegroundColor White
-Write-Host '  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝' -ForegroundColor White
+Write-Host '██    ██    ████       █████  ██████      ████' -ForegroundColor White
+Write-Host '██    ██   ██  ██         ██  ██    ██   ██  ██' -ForegroundColor White
+Write-Host '██    ██   ██  ██         ██  ██    ██   ██  ██' -ForegroundColor White
+Write-Host ' ██  ██    ██████         ██  ██████     ██████' -ForegroundColor White
+Write-Host ' ██  ██    ██  ██   ██    ██  ██  ██     ██  ██' -ForegroundColor White
+Write-Host '  ████     ██  ██    ██████   ██    ██   ██  ██' -ForegroundColor White
 Write-Host 'THE OPEN AGENT RESEARCH ECOSYSTEM' -ForegroundColor White
 Write-Host '─────────────────────────────────────────────────────────────────' -ForegroundColor DarkGray
 

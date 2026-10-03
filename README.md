@@ -1,7 +1,5 @@
-# VAJRA
-
 <p align="center">
-  <img src="assets/vajra-mark.png" alt="VAJRA gold and teal geometric thunderbolt emblem" width="148" />
+  <img src="assets/vajra-wordmark-banner.png" alt="VAJRA — The Open Agent Research Ecosystem" width="100%" />
 </p>
 
 <p align="center"><strong>Evidence before answers.</strong><br />A local-first research CLI, reusable agent skill, and MCP server.</p>
@@ -29,6 +27,8 @@ Restart the terminal if `vajra` is not on `PATH`, then:
 vajra doctor
 vajra research "What evidence supports and challenges your research question?" --mode standard
 ```
+
+For a guided terminal run on Windows, use `scripts/vajra-demo.ps1`. On macOS/Linux, use `bash scripts/vajra-demo.sh`. Both scripts prompt for a question (or accept it as an argument) and run actual Vajra research; set `VAJRA_MODE=fast`, `standard`, `deep`, or `forensic` to choose a mode.
 
 The research command prints the report and trace paths. By default, reports are saved in `%LOCALAPPDATA%\Vajra\reports` on Windows and `~/.local/share/vajra/reports` on macOS/Linux. Change the location with `--data-dir PATH` or `VAJRA_DATA_DIR`.
 

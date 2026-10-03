@@ -21,7 +21,7 @@ The source repository is public. This is an early experimental build and is **no
 
 ```powershell
 python -m pip install uv
-uv tool install --from "git+https://github.com/mishraxram/vajra.git" --with "ddgs==9.16.0" --with "mcp==2.2.0" vajra
+uv tool install --from "git+https://github.com/mishraxram/vajra.git" --with "ddgs==9.16.0" --with "mcp==2.2.0" vajra-research
 uv tool update-shell
 vajra doctor
 ```
@@ -31,6 +31,8 @@ Restart PowerShell if `vajra` is not found after updating the tool path. Then ru
 ```powershell
 vajra research "Your actual research question" --mode standard
 ```
+
+The install target is the distribution name `vajra-research`; it installs the `vajra` executable. The optional dependencies enable search and MCP support.
 
 Reports are saved under `%LOCALAPPDATA%\Vajra\reports`. The PyPI package has not been published; this command installs directly from GitHub.
 

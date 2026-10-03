@@ -17,7 +17,7 @@
 | Live research smoke | PASS, limited | DDGS search and direct fetch produced a trace with fetched sources/passages; citation audit reported valid. Provider behavior varied and some metasearch backends throttled/failed. This is one smoke workflow, not evidence of broad research quality. |
 | Dependency vulnerability scan | PASS, scoped | `pip-audit` scanned all locked optional runtime dependencies exported without the local project and reported “No known vulnerabilities found.” Scan date: 2026-10-03. Vulnerability databases and transitive platform selection can change. |
 | Third-party license inventory | PASS, scoped | Direct components were reviewed; `pip-licenses` inventoried the resolved Windows CPython 3.13 environment. See `THIRD_PARTY_NOTICES.md`; lockfile includes platform-conditional dependencies. |
-| Git | PASS | Public repository [`mishraxram/vajra`](https://github.com/mishraxram/vajra) created on 2026-10-04; local commits pushed to `master`. Public visibility verified through GitHub API. Git-based `uv tool run` smoke installed the public source with search/MCP extras and returned `vajra 0.1.0`. |
+| Git | PASS | Public repository [`mishraxram/vajra`](https://github.com/mishraxram/vajra) created on 2026-10-04; local commits pushed to `master`. Public visibility verified through GitHub API. Corrected `uv tool install --from ... vajra-research` command was tested in isolated tool/bin directories: it installed 33 packages and produced `vajra 0.1.0`. |
 
 ## Not passed / not run
 

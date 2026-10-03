@@ -82,17 +82,19 @@ Restart the client and ask it to research a question with Vajra. The server expo
 ## What it does
 
 - Plans bounded primary and counterevidence searches for `fast`, `standard`, `deep`, and `forensic` runs.
-- Tries DDGS automatic search, then DuckDuckGo, Bing, and Brave backends if the previous route errors or returns no hits. Every route and failure is recorded.
+- Searches with Agent Reach's configured Exa MCP tool through `mcporter` and DDGS in the same run; DDGS falls back across DuckDuckGo, Bing, and Brave. Missing/broken providers are recorded and do not prevent the other provider from working.
+- Accepts actual text collected by Agent Reach platform skills/tools (GitHub, YouTube, social channels, web, and others) through MCP or `--sources-file`; every imported source retains its URL, tool/channel attribution, content hash, and exact auditable evidence spans.
 - Fetches candidate public pages with URL, redirect, response-size, and timeout controls; extracts text without running page scripts.
 - Stores fetched text, exact quote offsets, metadata, hashes, query history, failures, and a replayable JSON trace in SQLite.
 - Marks a run `partial` when a query/fetch fails or it collects fewer than the mode's source minimum. It never labels a one-source standard run complete.
-- Dynamically reads Agent Reach's current channels and health. Agent Reach remains upstream-owned; its platform-specific content tools are not replaced by Vajra.
+- Dynamically reads Agent Reach's current channels and health. Vajra uses configured Exa search directly and lets compatible AI agents pass platform-specific Agent Reach results into the same evidence/audit pipeline; it does not install channels or take over credentials.
 
 Useful commands:
 
 ```text
 vajra doctor
 vajra research "QUESTION" --mode forensic
+vajra research "QUESTION" --mode standard --sources-file agent-reach-results.json
 vajra audit RESEARCH_ID
 vajra replay RESEARCH_ID
 vajra upstream-check
@@ -100,7 +102,7 @@ vajra upstream-check
 
 ## Current limits
 
-VAJRA is an evidence collection and citation-audit workbench, not an autonomous truth oracle. It does not yet perform semantic entailment, authoritative-source ranking, independent-source adjudication, or reliable general contradiction resolution. Evidence passages are source assertions. Check the sources yourself, especially for medical, legal, financial, or safety decisions.
+VAJRA is an evidence collection and citation-audit workbench, not an autonomous truth oracle. Agent Reach-supplied text is attributed to the named tool/channel and hash-audited locally, but Vajra does not independently prove that the upstream retrieval happened or that the text is true. It does not yet perform semantic entailment, authoritative-source ranking, independent-source adjudication, or reliable general contradiction resolution. Evidence passages are source assertions. Check the sources yourself, especially for medical, legal, financial, or safety decisions.
 
 Search coverage depends on external public engines and websites. Captchas, rate limits, robots/access controls, network policy, and HTTP 403/429 responses can reduce coverage. Failures are written into the trace and lower the run status. DNS rebinding risk and broader security gaps are documented in [SECURITY.md](SECURITY.md) and [THREAT_MODEL.md](THREAT_MODEL.md).
 

@@ -22,6 +22,8 @@ class MCPTests(unittest.IsolatedAsyncioTestCase):
                 tools = await client.list_tools()
                 names = {tool.name for tool in tools.tools}
                 self.assertEqual(names, {"vajra_research", "vajra_replay", "vajra_audit", "agent_reach_status"})
+                research_tool = next(tool for tool in tools.tools if tool.name == "vajra_research")
+                self.assertIn("sources_json", research_tool.input_schema["properties"])
                 result = await client.call_tool("agent_reach_status", {})
                 self.assertTrue(result.content)
                 payload = json.loads(result.content[0].text)

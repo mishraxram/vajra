@@ -15,6 +15,13 @@ class FakeSearch:
         return [SearchHit(url="https://example.org/report", title="Example source", provider=self.name)]
 
 
+class EmptySearch:
+    name = "empty-search"
+
+    def search(self, query, limit=5):
+        return []
+
+
 class EngineTests(unittest.TestCase):
     def test_research_persists_replayable_exact_evidence(self):
         text = "\n".join([
@@ -70,6 +77,26 @@ class EngineTests(unittest.TestCase):
                  "claims": [{"claim_id": "c", "evidence_ids": ["e"]}], "citations": [{"source_id": "s"}]}
         trace["evidence"][0]["passage"] = "wrong"
         self.assertFalse(audit_trace(trace)["valid"])
+
+    def test_agent_reach_supplied_text_is_saved_and_auditable(self):
+        source_text = ("Python asyncio TaskGroup waits for related tasks to finish when its context exits. "
+                       "If a task fails, the other tasks are cancelled and exceptions are grouped.")
+        with tempfile.TemporaryDirectory() as temp:
+            store = ResearchStore(Path(temp))
+            with patch("vajra.engine.validate_public_http_url", side_effect=lambda url: url):
+                trace = run_research("Python asyncio TaskGroup behavior", mode="fast", store=store,
+                    search_provider=EmptySearch(), external_sources=[{
+                        "url": "https://docs.python.org/3/library/asyncio-task.html",
+                        "title": "Coroutines and Tasks", "publisher": "Python docs",
+                        "provider": "agent-reach:exa", "text": source_text,
+                    }])
+            self.assertEqual(trace["status"], "completed")
+            self.assertEqual(len(trace["sources"]), 1)
+            self.assertEqual(trace["sources"][0]["source_type"], "agent-reach")
+            self.assertEqual(trace["sources"][0]["provider"], "agent-reach:exa")
+            self.assertTrue(trace["evidence"])
+            self.assertTrue(audit_trace(trace)["valid"])
+            self.assertEqual(store.get(trace["research_id"]), trace)
 
 
 if __name__ == "__main__":

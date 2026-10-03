@@ -26,14 +26,13 @@ This registry is discovered at runtime from `agent-reach doctor --json`; the tab
 | V2EX topics/replies | `v2ex.py` | Public V2EX API | none reported | Public endpoint health | Dynamic status only | Parity adapter test |
 | Xueqiu market/community | `xueqiu.py` | Xueqiu API + login cookie | none reported | User cookie/browser configuration; HTTP errors visible | Dynamic status only | Parity adapter test; local doctor reports warning |
 | RSS/Atom feeds | `rss.py` | `feedparser` | none reported | Package availability | Dynamic status only | Parity adapter test; generic feed fetch not wrapped |
-| Exa semantic web search | `exa_search.py` | Exa via `mcporter` | none reported | Local mcporter configuration; doctor does not connect-test remote MCP | Dynamic status only | Parity adapter test; local doctor warns unverified |
-| Arbitrary web pages | `web.py` | Jina Reader | none reported | Public Jina Reader route | Dynamic status only | Parity adapter test; Vajra has a separate direct fetcher |
+| Exa semantic web search | `exa_search.py` | Exa via `mcporter` | none reported | Local mcporter configuration; doctor does not connect-test remote MCP | Used as a live search provider when configured; DDGS also runs | Live search manually verified; Exa failure falls back to DDGS |
+| Arbitrary web pages | `web.py` | Jina Reader | none reported | Public Jina Reader route | AI clients can pass Jina-retrieved text through Vajra MCP or `--sources-file`; Vajra also direct-fetches public pages | Imported exact spans are audited; upstream fetch event is not independently verified |
 
 ## Preserved boundary
 
-Vajra does not vendor or modify Agent Reach. It invokes only fixed read-only `agent-reach doctor --json` and `agent-reach version` commands with `shell=False`, bounded timeouts, and dynamic JSON parsing. Platform CLI tools, configuration, cookies, health checks, installation, update checking, skill files, and routing remain under the upstream `agent-reach` CLI and skill. No Agent Reach configuration or user credentials are copied into Vajra. Upstream MCP is status-only; Vajra does not claim it supplies search/fetch operations.
+Vajra does not vendor or modify Agent Reach. It invokes fixed read-only `agent-reach doctor --json` and `agent-reach version` commands with `shell=False`, bounded timeouts, and dynamic JSON parsing; live web search calls the configured `exa.web_search_exa` tool through `mcporter` with `shell=False`. Platform CLI tools, configuration, cookies, installation, update checking, and skill routing remain under Agent Reach and its generated skill. No Agent Reach configuration or user credentials are copied into Vajra. Other platform-specific tools can supply retrieved text to Vajra's evidence pipeline, with explicit attribution and a local content hash; they are never claimed to be independently fetched by Vajra.
 
 ## Parity test contract
 
 When Agent Reach is installed, the integration test compares every registry key, status, backend list, active backend, and tier returned by the upstream JSON doctor with the Vajra adapter output. It deliberately does not expect a fixed count or channel list. If Agent Reach is absent, the adapter reports `unavailable` and tests mark the parity check skipped, not passed. The installed-version result and test run are recorded in the final audit.
-

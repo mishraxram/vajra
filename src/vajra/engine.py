@@ -16,14 +16,18 @@ from urllib.parse import quote
 
 from vajra.fetch import fetch_source, select_passages
 from vajra.models import Claim, Evidence, FetchedSource, jsonable
-from vajra.providers.agent_reach import AgentReachProvider
-from vajra.providers.search import DDGSSearchProvider, SearchProvider
+from vajra.providers.federated_search import FederatedSearchProvider
+from vajra.providers.search import SearchProvider
+from vajra.security import validate_public_http_url
 from vajra.store import ResearchStore
 
 logger = logging.getLogger("vajra")
 MODES = {"fast": 1, "standard": 3, "deep": 5, "forensic": 7}
 MAX_FETCHES = {"fast": 3, "standard": 6, "deep": 10, "forensic": 14}
 MIN_SOURCES = {"fast": 1, "standard": 2, "deep": 3, "forensic": 3}
+MAX_EXTERNAL_SOURCES = 20
+MAX_EXTERNAL_SOURCE_BYTES = 1_000_000
+MAX_EXTERNAL_TOTAL_BYTES = 5_000_000
 _NEGATIONS = {"not", "no", "never", "none", "without", "cannot", "can't", "fails", "failed", "false", "doesn't", "isn't"}
 
 
@@ -81,14 +85,15 @@ def _candidate_contradictions(claims: list[dict[str, Any]]) -> list[dict[str, st
 
 
 def run_research(question: str, mode: str = "standard", *, store: ResearchStore | None = None,
-                 search_provider: SearchProvider | None = None) -> dict[str, Any]:
+                 search_provider: SearchProvider | None = None,
+                 external_sources: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     question = " ".join(question.split())
     if not question or len(question) > 2000:
         raise ValueError("Question must contain 1 to 2000 characters")
     if mode not in MODES:
         raise ValueError(f"Mode must be one of: {', '.join(MODES)}")
     store = store or ResearchStore()
-    provider = search_provider or DDGSSearchProvider()
+    provider = search_provider or FederatedSearchProvider()
     started = time.perf_counter()
     stamp = datetime.now(timezone.utc).isoformat()
     research_id = uuid.uuid4().hex
@@ -97,6 +102,64 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
     search_results: list[dict[str, Any]] = []
     failures: list[dict[str, str]] = []
     fallbacks: list[dict[str, Any]] = []
+    sources: list[dict[str, Any]] = []
+    evidence: list[dict[str, Any]] = []
+    claims: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
+
+    # Agent clients can provide text collected through platform-specific
+    # Agent Reach skills/tools. Store its declared provenance and exact text;
+    # do not pretend that search snippets were independently fetched.
+    supplied_sources = external_sources or []
+    if len(supplied_sources) > MAX_EXTERNAL_SOURCES:
+        failures.append({"stage": "external_source", "error":
+                         f"Too many supplied sources; maximum is {MAX_EXTERNAL_SOURCES}"})
+    external_total = 0
+    for index, item in enumerate(supplied_sources[:MAX_EXTERNAL_SOURCES]):
+        try:
+            if not isinstance(item, dict):
+                raise ValueError("source entry must be an object")
+            url = validate_public_http_url(str(item.get("url") or ""))
+            text = str(item.get("text") or item.get("content") or "").strip()
+            if not text:
+                raise ValueError("source text is empty")
+            size = len(text.encode("utf-8"))
+            if size > MAX_EXTERNAL_SOURCE_BYTES:
+                raise ValueError(f"source exceeds {MAX_EXTERNAL_SOURCE_BYTES} bytes")
+            if external_total + size > MAX_EXTERNAL_TOTAL_BYTES:
+                raise ValueError(f"supplied text exceeds {MAX_EXTERNAL_TOTAL_BYTES} bytes total")
+            external_total += size
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            provider_name = str(item.get("provider") or item.get("channel") or "agent-reach")[:120]
+            source_type = "agent-reach" if provider_name.casefold().startswith("agent-reach") else "external-tool"
+            digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            source_id = _source_id(url)
+            source = {"source_id": source_id, "url": url, "final_url": url,
+                      "title": str(item.get("title") or "")[:500],
+                      "author": str(item.get("author") or "")[:300],
+                      "publisher": str(item.get("publisher") or item.get("channel") or "")[:300],
+                      "published_at": str(item.get("published_at") or "")[:100] or None,
+                      "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                      "content_hash": digest, "text": text,
+                      "source_type": source_type, "provider": provider_name,
+                      "search_title": str(item.get("title") or "")[:500],
+                      "search_snippet": "", "source_quality": "unassessed",
+                      "independence_group": digest}
+            sources.append(source)
+            for passage, start, end, relevance in select_passages(text, question, limit=3):
+                evidence_id = hashlib.sha256(f"{source_id}:{start}:{end}".encode()).hexdigest()[:24]
+                evidence.append(jsonable(Evidence(evidence_id=evidence_id, source_id=source_id,
+                    passage=passage, start_offset=start, end_offset=end, relevance=round(relevance, 4))))
+                claim = Claim(claim_id=_claim_id(passage), text=passage, status="PARTIALLY_VERIFIED",
+                    evidence_ids=(evidence_id,), notes=("Exact passage is present in text supplied by the named source tool; "
+                    "the external retrieval operation and factual truth were not independently verified by Vajra."))
+                if not any(existing["claim_id"] == claim.claim_id for existing in claims):
+                    claims.append(jsonable(claim))
+        except Exception as exc:
+            failures.append({"stage": "external_source", "index": str(index),
+                             "error": f"{type(exc).__name__}: {exc}"})
     for path_name, path_queries in (("primary", plan["queries"]), ("adversarial", plan["adversarial_queries"])):
         for query in path_queries:
             try:
@@ -121,10 +184,7 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
         for hit in search["hits"]:
             url = str(hit["url"])
             unique_hits.setdefault(_source_id(url), hit)
-    candidates = list(unique_hits.values())[:MAX_FETCHES[mode]]
-    sources: list[dict[str, Any]] = []
-    evidence: list[dict[str, Any]] = []
-    claims: list[dict[str, Any]] = []
+    candidates = [hit for hit in unique_hits.values() if str(hit["url"]) not in seen_urls][:MAX_FETCHES[mode]]
 
     def do_fetch(hit: dict[str, Any]) -> tuple[dict[str, Any], FetchedSource | None, str | None]:
         try:
@@ -162,11 +222,14 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
     trace: dict[str, Any] = {"schema_version": "1.0", "research_id": research_id, "question": question, "timestamp": stamp,
         "mode": mode, "status": status, "plan": plan,
         "providers": [{"name": provider.name, "role": "search", "state": "used" if search_results else "failed"},
-                      {"name": "direct-fetch", "role": "retrieve/extract", "state": "used" if sources else "failed"},
-                      {"name": "agent-reach", "role": "capability-health", "state": "not used for content retrieval"}],
+                      {"name": "direct-fetch", "role": "retrieve/extract",
+                       "state": "used" if any(src.get("source_type") == "web" for src in sources) else "not used"},
+                      {"name": "agent-reach", "role": "capability-and-external-content",
+                       "state": "used" if any(src.get("source_type") == "agent-reach" for src in sources) else "not used for content retrieval"}],
         "queries": search_results, "sources": sources, "evidence": evidence, "claims": claims,
         "contradictions": contradictions, "verification": [{"claim_id": c["claim_id"], "status": c["status"],
-            "checks": ["source fetched", "passage extracted from source text"], "limitations": ["source authority and factual truth not verified"]} for c in claims],
+            "checks": ["passage span matches stored source text"],
+            "limitations": ["source authority and factual truth not verified"]} for c in claims],
         "citations": [{"source_id": src["source_id"], "url": src["url"], "title": src["title"], "author": src["author"], "publisher": src["publisher"],
                        "published_at": src["published_at"], "retrieved_at": src["retrieved_at"], "content_hash": src["content_hash"]} for src in sources],
         "fallbacks": fallbacks, "failures": failures, "final_synthesis": _synthesize(question, claims, sources, evidence, failures),
@@ -203,7 +266,7 @@ def _synthesize(question: str, claims: list[dict[str, Any]], sources: list[dict[
         if ev and source:
             ranked_items.append((claim, ev, source))
     # Put the strongest passage from each distinct source first, then show
-    # additional passages. This avoids letting one page dominate the answer.
+    # additional passages. This avoids letting one page dominate the report.
     diverse_items = []
     remaining_items = []
     seen_sources = set()
@@ -215,11 +278,11 @@ def _synthesize(question: str, claims: list[dict[str, Any]], sources: list[dict[
             remaining_items.append(item)
     ranked_items = diverse_items + remaining_items
     lines = [
-        f"## Evidence-based answer to: {_escape_markdown(question)}",
+        f"## Source-backed passages for: {_escape_markdown(question)}",
         "",
-        "The passages below are ranked by relevance and quoted from fetched sources. They show what those sources say; VAJRA has not independently confirmed their factual accuracy or authority.",
+        "The passages below are ranked by relevance and quoted from retrieved source text. They show what those sources say; VAJRA has not independently confirmed their factual accuracy or authority.",
         "",
-        "### Most relevant findings",
+        "### Most relevant source passages",
     ]
     shown = 0
     for claim, _ev, source in ranked_items:
@@ -231,7 +294,7 @@ def _synthesize(question: str, claims: list[dict[str, Any]], sources: list[dict[
             break
     if len(ranked_items) > shown:
         lines.append(f"- {len(ranked_items) - shown} additional passage(s) are available in the saved report trace.")
-    lines.extend(["", f"Collected {len(sources)} fetched source(s) and {len(evidence)} passage(s).",
+    lines.extend(["", f"Collected {len(sources)} source(s) and {len(evidence)} passage(s).",
                   "Source authority, factual correctness, and independence are not verified by this run."])
     if failures:
         lines.append(f"{len(failures)} provider or fetch failure(s) occurred; see the trace.")

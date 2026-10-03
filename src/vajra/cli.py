@@ -71,11 +71,11 @@ def _show_banner() -> None:
 
 
 def _run_research(question: str, mode: str, store: ResearchStore, *, as_json: bool = False,
-                  show_banner: bool = True) -> int:
+                  show_banner: bool = True, external_sources: list[dict] | None = None) -> int:
     if show_banner and sys.stdout.isatty():
         _show_banner()
     try:
-        trace = run_research(question, mode, store=store)
+        trace = run_research(question, mode, store=store, external_sources=external_sources)
     except Exception as exc:
         print(f"Research failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
@@ -142,6 +142,7 @@ def _parser() -> argparse.ArgumentParser:
     research.add_argument("question")
     research.add_argument("--mode", choices=sorted(MODES), default="standard")
     research.add_argument("--json", action="store_true", help="Always print machine-readable JSON")
+    research.add_argument("--sources-file", help="UTF-8 JSON array of source objects collected by Agent Reach or another tool")
     replay = commands.add_parser("replay", help="Print a saved research trace as JSON")
     replay.add_argument("research_id")
     audit = commands.add_parser("audit", help="Audit evidence spans and citation IDs in a saved run")
@@ -168,7 +169,21 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0 if result["status"] == "checked" else 1
     if args.command == "research":
-        return _run_research(args.question, args.mode, store, as_json=args.json)
+        external_sources = None
+        if args.sources_file:
+            try:
+                source_path = Path(args.sources_file).expanduser()
+                if source_path.stat().st_size > 5_500_000:
+                    raise ValueError("source file exceeds 5.5 MB")
+                payload = json.loads(source_path.read_text(encoding="utf-8"))
+                if not isinstance(payload, list):
+                    raise ValueError("source file must contain a JSON array")
+                external_sources = payload
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+                print(f"Could not read --sources-file: {exc}", file=sys.stderr)
+                return 2
+        return _run_research(args.question, args.mode, store, as_json=args.json,
+                             external_sources=external_sources)
     if args.command in {"replay", "audit"}:
         trace = store.get(args.research_id)
         if trace is None:

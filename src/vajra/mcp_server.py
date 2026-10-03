@@ -17,9 +17,17 @@ def create_server(store: ResearchStore | None = None):
         "Research outputs quote source passages and do not independently establish factual truth."))
 
     @server.tool()
-    def vajra_research(question: str, mode: str = "standard") -> str:
-        """Collect source-linked findings; follow with replay and audit before answering."""
-        trace = run_research(question, mode, store=db)
+    def vajra_research(question: str, mode: str = "standard", sources_json: str = "[]") -> str:
+        """Search the web and audit sources; optionally include JSON source text collected by Agent Reach platform tools."""
+        try:
+            external_sources = json.loads(sources_json)
+            if not isinstance(external_sources, list):
+                raise ValueError("sources_json must be a JSON array")
+            if len(sources_json.encode("utf-8")) > 5_500_000:
+                raise ValueError("sources_json exceeds 5.5 MB")
+        except (json.JSONDecodeError, ValueError) as exc:
+            return json.dumps({"error": f"invalid sources_json: {exc}"}, ensure_ascii=False)
+        trace = run_research(question, mode, store=db, external_sources=external_sources)
         return json.dumps({"research_id": trace["research_id"], "status": trace["status"],
                            "sources": len(trace["sources"]), "evidence": len(trace["evidence"]),
                            "findings": trace["final_synthesis"], "citations": trace["citations"],

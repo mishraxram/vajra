@@ -1,6 +1,12 @@
 # VAJRA
 
-**Evidence before answers.** A local-first research CLI and MCP server that saves the search trail, fetched sources, exact evidence passages, and an auditable report.
+<p align="center">
+  <img src="assets/vajra-mark.png" alt="VAJRA gold and teal geometric thunderbolt emblem" width="148" />
+</p>
+
+<p align="center"><strong>Evidence before answers.</strong><br />A local-first research CLI, reusable agent skill, and MCP server.</p>
+
+<p align="center">Search → fetch → preserve exact passages → audit the trail</p>
 
 [![CI](https://github.com/mishraxram/vajra/actions/workflows/ci.yml/badge.svg)](https://github.com/mishraxram/vajra/actions/workflows/ci.yml)
 [![MIT License](https://img.shields.io/github/license/mishraxram/vajra)](LICENSE)
@@ -27,6 +33,18 @@ vajra research "What evidence supports and challenges your research question?" -
 The research command prints the report and trace paths. By default, reports are saved in `%LOCALAPPDATA%\Vajra\reports` on Windows and `~/.local/share/vajra/reports` on macOS/Linux. Change the location with `--data-dir PATH` or `VAJRA_DATA_DIR`.
 
 The package installs search and MCP dependencies by default, so the same installation works for the CLI and MCP-compatible AI clients. No API key or paid search account is required. Public search backends may rate-limit or block requests.
+
+## Install into your AI CLI
+
+To give a compatible coding agent reusable VAJRA instructions, install the skill to all supported clients detected by the open Agent Skills installer:
+
+```powershell
+npx skills add mishraxram/vajra --skill vajra-research --global --yes --agent '*'
+```
+
+The skill is real workflow guidance: it tells an agent to run VAJRA research, inspect the run status, and audit the saved evidence. The `uv tool install` command above installs the executable and MCP server; the skill command installs instructions. For a one-message AI-assisted setup, send your agent: `Install VAJRA for me: https://raw.githubusercontent.com/mishraxram/vajra/master/INSTALL.md`.
+
+MCP clients can call VAJRA's research, replay, citation-audit, and Agent Reach status tools. See [tested client setup examples](AGENT_INTEGRATIONS.md).
 
 ## Connect an AI coding agent
 

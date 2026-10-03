@@ -19,16 +19,30 @@ Requires Python 3.10 or newer. Install `uv` once, then install VAJRA directly fr
 ```powershell
 python -m pip install uv
 uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
+if ($LASTEXITCODE -eq 0) {
+  $env:PATH = "$(uv tool dir --bin);$env:PATH"
+  vajra
+}
 ```
 
 The install target is the Python distribution name, `vajra-research`; the command it adds is still `vajra`.
 
+On macOS/Linux/WSL, run:
+
+```bash
+python3 -m pip install uv
+uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research && export PATH="$(uv tool dir --bin):$PATH" && vajra
+```
+
 Restart the terminal if `vajra` is not on `PATH`, then:
 
 ```powershell
+vajra
 vajra doctor
 vajra research "What evidence supports and challenges your research question?" --mode standard
 ```
+
+Running `vajra` with no arguments opens the branded first-run check, confirms the local setup, and prompts for a research question. Interactive research prints the evidence-ranked report with citations; redirected output stays JSON for AI tools and scripts. Add `--json` to force JSON in a terminal. MCP startup stays protocol-clean and does not print the banner.
 
 For a guided terminal run on Windows, use `scripts/vajra-demo.ps1`. On macOS/Linux, use `bash scripts/vajra-demo.sh`. Both scripts prompt for a question (or accept it as an argument) and run actual Vajra research; set `VAJRA_MODE=fast`, `standard`, `deep`, or `forensic` to choose a mode.
 

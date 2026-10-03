@@ -7,12 +7,13 @@ Use Python 3.10 or newer. VAJRA installs into the user's `uv` tool environment; 
 If `uv` is not installed yet, install it once with `python -m pip install uv`. Then:
 
 ```powershell
-uv tool install git+https://github.com/mishraxram/vajra.git
+uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
+vajra welcome
 vajra --version
 vajra doctor
 ```
 
-The command installs the `vajra` executable plus its search and MCP runtime dependencies. Restart the terminal if the command is not found after installation.
+The command installs the `vajra` executable plus its search and MCP runtime dependencies. `vajra welcome` shows the VAJRA banner, verifies the local installation, and prompts for a question when run in an interactive terminal. Restart the terminal if the command is not found after installation.
 
 ## Reusable skill for supported coding agents
 

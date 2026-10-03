@@ -188,16 +188,51 @@ def _synthesize(question: str, claims: list[dict[str, Any]], sources: list[dict[
         return note
     source_map = {item["source_id"]: item for item in sources}
     evidence_map = {item["evidence_id"]: item for item in evidence}
-    lines = [f"Question: {_escape_markdown(question)}", "", "Evidence excerpts (verbatim; source assertion, not independent confirmation):"]
-    for claim in claims:
+    ranked_claims = sorted(
+        claims,
+        key=lambda claim: max(
+            (evidence_map.get(evidence_id, {}).get("relevance", 0) for evidence_id in claim["evidence_ids"]),
+            default=0,
+        ),
+        reverse=True,
+    )
+    ranked_items = []
+    for claim in ranked_claims:
         ev = evidence_map.get(claim["evidence_ids"][0])
         source = source_map.get(ev["source_id"]) if ev else None
-        if not ev or not source:
-            continue
+        if ev and source:
+            ranked_items.append((claim, ev, source))
+    # Put the strongest passage from each distinct source first, then show
+    # additional passages. This avoids letting one page dominate the answer.
+    diverse_items = []
+    remaining_items = []
+    seen_sources = set()
+    for item in ranked_items:
+        if item[2]["source_id"] not in seen_sources:
+            diverse_items.append(item)
+            seen_sources.add(item[2]["source_id"])
+        else:
+            remaining_items.append(item)
+    ranked_items = diverse_items + remaining_items
+    lines = [
+        f"## Evidence-based answer to: {_escape_markdown(question)}",
+        "",
+        "The passages below are ranked by relevance and quoted from fetched sources. They show what those sources say; VAJRA has not independently confirmed their factual accuracy or authority.",
+        "",
+        "### Most relevant findings",
+    ]
+    shown = 0
+    for claim, _ev, source in ranked_items:
         safe_url = quote(source["url"], safe=":/?&=#%+,-._~@")
-        lines.append(f"- {_escape_markdown(claim['text'])} [{source['source_id']}]({safe_url}) (status: {claim['status']})")
+        title = _escape_markdown(source.get("title") or source["url"])
+        lines.append(f"- “{_escape_markdown(claim['text'])}” — [{title}]({safe_url})")
+        shown += 1
+        if shown == 8:
+            break
+    if len(ranked_items) > shown:
+        lines.append(f"- {len(ranked_items) - shown} additional passage(s) are available in the saved report trace.")
     lines.extend(["", f"Collected {len(sources)} fetched source(s) and {len(evidence)} passage(s).",
-                  "Authority, factual correctness, and independence remain unverified."])
+                  "Source authority, factual correctness, and independence are not verified by this run."])
     if failures:
         lines.append(f"{len(failures)} provider or fetch failure(s) occurred; see the trace.")
     return "\n".join(lines)

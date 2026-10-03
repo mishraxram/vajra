@@ -3,7 +3,7 @@
 VAJRA exposes the same real research workflow in two ways: a CLI and a local stdio MCP server. Agent Skills are reusable instructions that teach a client how to invoke and audit that workflow. Install the runtime once:
 
 ```powershell
-uv tool install git+https://github.com/mishraxram/vajra.git
+uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
 ```
 
 To install the skill globally for supported agent clients:

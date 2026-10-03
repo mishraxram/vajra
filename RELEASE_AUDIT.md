@@ -35,3 +35,16 @@
 ## Release gate
 
 Keep the release blocked until the missing research-verification and provider-routing capabilities are either implemented or explicitly removed from the product goal; a versioned human-adjudicated benchmark is run; performance and adversarial security results are measured; cross-platform installation is checked; and release artifacts receive a fresh review. The current local build is suitable for continued development and cautious experimentation, not a production-readiness claim.
+
+## Installability follow-up: 0.2.0 (2026-10-04)
+
+| Area | Status | Evidence |
+|---|---|---|
+| One-command GitHub install | PASS | In an isolated Windows tool/bin directory, `uv tool install git+https://github.com/mishraxram/vajra.git` fetched commit `91962709b3c494c313ffeb163538774f4b9fe0ec`, installed 33 packages, and created the `vajra` executable at version 0.2.0. This removes the old `--from ... vajra` distribution-name mismatch. |
+| Installed CLI smoke | PASS, limited | The freshly installed executable completed a live `fast` research run with 1 fetched source and 3 exact passages; `vajra audit` returned `valid: true`. Search succeeded through DDGS `auto`. This single query does not establish general coverage or research quality. |
+| Local checks/build | PASS, limited | `uv lock --check`; all 17 unit/integration tests; and `uv build` produced the 0.2.0 wheel and source distribution on Windows CPython 3.13. |
+| GitHub CI | PASS | Matrix workflow [run 37147381681](https://github.com/mishraxram/vajra/actions/runs/37147381681) passed on commit `91962709b3c494c313ffeb163538774f4b9fe0ec`. |
+| GitHub discovery metadata | PASS | Repository description updated and topics added for `ai-agents`, `deep-research`, `evidence`, `mcp`, `open-source`, `python`, and `research`. Discovery metadata cannot guarantee popularity. |
+| Doctor interpretation | PASS, limited | Fresh install reported `overall: CONFIGURED`, with database, DDGS, and MCP configured. The separately reported Agent Reach health subprocess timed out; search network remains unprobed by `doctor`. |
+
+This follow-up verifies a convenient experimental GitHub install. It does not change the production-readiness decision above, publish a PyPI package, or qualify the project for consequential use.

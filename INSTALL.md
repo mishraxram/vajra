@@ -8,12 +8,15 @@ If `uv` is not installed yet, install it once with `python -m pip install uv`. T
 
 ```powershell
 uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
-vajra welcome
+if ($LASTEXITCODE -eq 0) {
+  $env:PATH = "$(uv tool dir --bin);$env:PATH"
+  vajra welcome
+}
 vajra --version
 vajra doctor
 ```
 
-The command installs the `vajra` executable plus its search and MCP runtime dependencies. `vajra welcome` shows the VAJRA banner, verifies the local installation, and prompts for a question when run in an interactive terminal. Restart the terminal if the command is not found after installation.
+This installs the `vajra` executable plus its search and MCP runtime dependencies, adds the uv executable directory to this PowerShell session, then runs the branded welcome check. In an interactive terminal `vajra welcome` prompts for a research question; in a non-interactive agent terminal it displays the banner and exits cleanly. Restart the terminal if `vajra` is not found in later sessions.
 
 ## Reusable skill for supported coding agents
 

@@ -23,7 +23,7 @@ Use the actual VAJRA CLI or MCP tools to do the work. Never present a mock repor
 
 ## If VAJRA is unavailable
 
-Show the user this install command and explain that it installs the executable and MCP runtime:
+Show the user the platform-specific install-and-welcome instructions in [INSTALL.md](https://github.com/mishraxram/vajra/blob/master/INSTALL.md). This installs the executable and MCP runtime, adjusts the current PowerShell PATH on Windows, and runs the branded welcome check. The shorter command is:
 
 ```powershell
 uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research

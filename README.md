@@ -58,7 +58,7 @@ To give a compatible coding agent reusable VAJRA instructions, install the skill
 npx skills add mishraxram/vajra --skill vajra-research --global --yes --agent '*'
 ```
 
-The skill is real workflow guidance: it tells an agent to run VAJRA research, inspect the run status, and audit the saved evidence. The `uv tool install` command above installs the executable and MCP server; the skill command installs instructions. For a one-message AI-assisted setup, send your agent: `Install VAJRA for me: https://raw.githubusercontent.com/mishraxram/vajra/master/INSTALL.md`.
+The skill guides agents through installation, research, and citation audits. The `uv tool install` command installs the executable and MCP server; the skill command installs agent instructions. For a no-follow-up setup request, send your agent: `Set up VAJRA here using https://raw.githubusercontent.com/mishraxram/vajra/master/INSTALL.md. Install the CLI and supported global skill, verify both, configure this client's documented MCP if supported, and reply only with concise success or the exact blocker.`
 
 MCP clients can call VAJRA's research, replay, citation-audit, and Agent Reach status tools. See [tested client setup examples](AGENT_INTEGRATIONS.md).
 

@@ -13,10 +13,11 @@ if ($LASTEXITCODE -eq 0) {
   vajra welcome
 }
 vajra --version
-vajra doctor
 ```
 
 This installs the `vajra` executable plus its search and MCP runtime dependencies, adds the uv executable directory to this PowerShell session, then runs the branded welcome check. In an interactive terminal `vajra welcome` prompts for a research question; in a non-interactive agent terminal it displays the banner and exits cleanly. Restart the terminal if `vajra` is not found in later sessions.
+
+Run `vajra doctor` only when `vajra welcome` reports a setup problem or you need its full diagnostics; doctor also checks the optional Agent Reach integration and may take longer.
 
 ## Reusable skill for supported coding agents
 
@@ -34,8 +35,10 @@ Follow the short client-specific commands and config examples in [AGENT_INTEGRAT
 
 ## One-message setup for an AI agent
 
-Send this to an AI coding agent with terminal access:
+For any AI CLI with terminal access and Agent Skills support, send:
 
-> Install VAJRA for me using the steps at https://raw.githubusercontent.com/mishraxram/vajra/master/INSTALL.md. Install the CLI and global skill, verify `vajra --version`, then show me the MCP setup for my current client. Do not claim a client is connected until its MCP status confirms it.
+> Set up VAJRA on this machine: detect my OS, install `uv` only if missing, install the CLI and global skill for supported AI CLIs, verify both, and configure this client's documented MCP setup if supported. Don't ask follow-up questions; reply only with a concise success or the exact blocker.
+
+The Agent Skills installer targets the clients it supports; no installer can configure every AI CLI. Client-specific MCP steps are listed in [AGENT_INTEGRATIONS.md](AGENT_INTEGRATIONS.md). Do not claim MCP is connected until that client confirms it.
 
 Installation grants the local VAJRA process the ability to perform public web searches when its research command or MCP tool is explicitly invoked. Review the repository's [security notes](SECURITY.md) and [limitations](README.md#current-limits).

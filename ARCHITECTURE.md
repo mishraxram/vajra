@@ -5,8 +5,8 @@ CLI / local MCP stdio
          |
 Research planner -> asyncio bounded worker pools
     |                         |
-Federated search         bounded public fetches
-Exa -> DDGS route         URL/redirect/size/deadline checks
+Free DDGS fallback chain  bounded public fetches
+auto -> DuckDuckGo/Bing/Brave  URL/redirect/size/deadline checks
     |                         |
 AgentReach health       semantic HTML/text extraction
     |                         |

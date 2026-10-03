@@ -2,7 +2,7 @@
 
 ## Search
 
-The default federated provider calls Agent Reach's configured Exa MCP search through `mcporter` and DDGS for each query, deduplicates the returned URLs, then direct-fetches candidate pages. DDGS is pinned to 9.16.0 and tries `auto`, DuckDuckGo, Bing, and Brave. Exa is optional: if mcporter, the Exa server, or network access fails, DDGS still runs. Every backend attempt is recorded. `doctor` checks local package/configuration presence but does not prove live search; only a research run validates connectivity. Search highlights are leads, not evidence: citations are created only from fetched pages or explicitly attributed text passed in by a platform tool.
+The default provider uses only DDGS (pinned to 9.16.0) and its free public search fallbacks: `auto`, DuckDuckGo, Bing, and Brave. It requires no API key, paid search account, or login. Successful and failed backend attempts are recorded. `doctor` checks local package presence but does not prove live search; only a research run validates connectivity. Search snippets are leads, not evidence: citations are created only from fetched pages or explicitly attributed text passed in by a platform tool.
 
 Agent Reach owns platform-specific channel setup and tools. A compatible AI agent can pass their exact retrieved text to Vajra through MCP `sources_json` or CLI `--sources-file`. Imported items must include the original URL and provider/channel. Vajra hashes and audits the supplied text but cannot independently confirm the external tool's retrieval event. Login-only platforms remain opt-in and follow Agent Reach's own skill/retry guidance.
 

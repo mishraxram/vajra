@@ -48,7 +48,7 @@ For a guided terminal run on Windows, use `scripts/vajra-demo.ps1`. On macOS/Lin
 
 The research command prints the report and trace paths. By default, reports are saved in `%LOCALAPPDATA%\Vajra\reports` on Windows and `~/.local/share/vajra/reports` on macOS/Linux. Change the location with `--data-dir PATH` or `VAJRA_DATA_DIR`.
 
-The package installs search and MCP dependencies by default, so the same installation works for the CLI and MCP-compatible AI clients. No API key or paid search account is required. Public search backends may rate-limit or block requests.
+The package installs search and MCP dependencies by default, so the same installation works for the CLI and MCP-compatible AI clients. Default search uses free public DDGS backends and needs no API key, paid search account, or login. Public search backends may rate-limit or block requests.
 
 ## Install into your AI CLI
 
@@ -58,7 +58,7 @@ To give a compatible coding agent reusable VAJRA instructions, install the skill
 npx skills add mishraxram/vajra --skill vajra-research --global --yes --agent '*'
 ```
 
-The skill guides agents through installation, research, and citation audits. The `uv tool install` command installs the executable and MCP server; the skill command installs agent instructions. For a no-follow-up setup request, send your agent: `Set up VAJRA here using https://raw.githubusercontent.com/mishraxram/vajra/master/INSTALL.md. Install the CLI and supported global skill, verify both, configure this client's documented MCP if supported, and reply only with concise success or the exact blocker.`
+The skill auto-triggers for research/current-fact questions in clients that support Agent Skills; it tells the agent to run research without asking you to activate Vajra. The `uv tool install` command installs the executable and MCP server; the skill command installs agent instructions. For a no-follow-up setup request, send your agent: `Set up VAJRA here using https://raw.githubusercontent.com/mishraxram/vajra/master/INSTALL.md. Install the CLI and supported global skill, verify both, configure this client's documented MCP if supported, and reply only with concise success or the exact blocker.`
 
 MCP clients can call VAJRA's research, replay, citation-audit, and Agent Reach status tools. See [tested client setup examples](AGENT_INTEGRATIONS.md).
 
@@ -82,13 +82,13 @@ Restart the client and ask it to research a question with Vajra. The server expo
 ## What it does
 
 - Plans bounded primary and counterevidence searches for `fast`, `standard`, `deep`, and `forensic` runs, scheduled concurrently through capped async worker pools.
-- Searches with Agent Reach's configured Exa MCP tool through `mcporter` and DDGS in the same run; DDGS falls back across DuckDuckGo, Bing, and Brave. Missing/broken providers are recorded and do not prevent the other provider from working.
+- Searches with keyless DDGS free public backends; it tries `auto`, DuckDuckGo, Bing, and Brave as fallbacks and records which route worked. No Exa credentials, API keys, or paid account are needed by Vajra's default research path.
 - Accepts actual text collected by Agent Reach platform skills/tools (GitHub, YouTube, social channels, web, and others) through MCP or `--sources-file`; every imported source retains its URL, tool/channel attribution, content hash, and exact auditable evidence spans.
 - Fetches candidate public pages with URL, redirect, response-size, and deadline controls; extracts headings, lists, and paragraphs without running page scripts and drops hidden/navigation clutter.
 - Treats retrieved text as untrusted data, removes invisible control characters, detects common access challenges, and stops without browser spoofing or CAPTCHA bypass. MCP replay reads large source bodies in bounded overlapping chunks.
 - Stores fetched text, exact quote offsets, metadata, hashes, query history, failures, and a replayable JSON trace in SQLite.
 - Marks a run `partial` when a query/fetch fails or it collects fewer than the mode's source minimum. It never labels a one-source standard run complete.
-- Dynamically reads Agent Reach's current channels and health. Vajra uses configured Exa search directly and lets compatible AI agents pass platform-specific Agent Reach results into the same evidence/audit pipeline; it does not install channels or take over credentials.
+- Dynamically reads Agent Reach's current channels and health. Compatible AI agents can pass platform-specific Agent Reach results into the same evidence/audit pipeline; those optional integrations keep their own setup and credential requirements separate from Vajra's free general web research.
 
 Useful commands:
 

@@ -16,7 +16,7 @@ class DDGSSearchProvider:
     name = "ddgs"
     fallback_backends = ("duckduckgo", "bing", "brave")
 
-    def __init__(self, timeout: int = 8):
+    def __init__(self, timeout: int = 5):
         self.timeout = timeout
         self.last_attempts: list[dict[str, object]] = []
 
@@ -25,7 +25,7 @@ class DDGSSearchProvider:
             import ddgs  # noqa: F401
         except ImportError:
             return "unavailable", "Install Vajra with its standard dependencies or install ddgs."
-        return "configured", "DDGS library is installed; network health is verified only when a search runs."
+            return "configured", "Free public search is ready; no API key or paid account is required. Network is checked when a search runs."
 
     def search(self, query: str, limit: int = 5) -> list[SearchHit]:
         try:

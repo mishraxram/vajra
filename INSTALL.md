@@ -2,6 +2,8 @@
 
 Use Python 3.10 or newer. VAJRA installs into the user's `uv` tool environment; it does not install browser extensions, alter shell profiles, or configure an AI client for you.
 
+Core web research is free and keyless: it uses public DDGS search backends and does not need an API key, paid plan, or login. Optional platform skills may have their own upstream requirements, but they are not needed for Vajra's default web research.
+
 ## CLI and MCP server
 
 If `uv` is not installed yet, install it once with `python -m pip install uv`. Then:

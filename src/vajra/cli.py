@@ -114,7 +114,11 @@ def _welcome(store: ResearchStore) -> int:
     if not sys.stdin.isatty():
         print("Run `vajra doctor` for diagnostics or `vajra research \"your question\"` to start.")
         return 0 if database_ok else 2
-    question = input("vajra ➔ ").strip()
+    try:
+        question = input("vajra ➔ ").strip()
+    except EOFError:
+        print()
+        question = ""
     if not question:
         print("Ready when you are. Run `vajra` again to start a research question.")
         return 0 if database_ok else 2

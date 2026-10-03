@@ -18,8 +18,10 @@ Requires Python 3.10 or newer. Install `uv` once, then install VAJRA directly fr
 
 ```powershell
 python -m pip install uv
-uv tool install git+https://github.com/mishraxram/vajra.git
+uv tool install --from git+https://github.com/mishraxram/vajra.git vajra-research
 ```
+
+The install target is the Python distribution name, `vajra-research`; the command it adds is still `vajra`.
 
 Restart the terminal if `vajra` is not on `PATH`, then:
 

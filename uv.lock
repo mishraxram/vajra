@@ -1113,26 +1113,15 @@ wheels = [
 
 [[package]]
 name = "vajra-research"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
-
-[package.optional-dependencies]
-all = [
+dependencies = [
     { name = "ddgs" },
     { name = "mcp" },
-]
-mcp = [
-    { name = "mcp" },
-]
-search = [
-    { name = "ddgs" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "ddgs", marker = "extra == 'all'", specifier = "==9.16.0" },
-    { name = "ddgs", marker = "extra == 'search'", specifier = "==9.16.0" },
-    { name = "mcp", marker = "extra == 'all'", specifier = "==2.2.0" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = "==2.2.0" },
+    { name = "ddgs", specifier = "==9.16.0" },
+    { name = "mcp", specifier = "==2.2.0" },
 ]
-provides-extras = ["search", "mcp", "all"]

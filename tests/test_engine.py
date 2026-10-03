@@ -27,7 +27,7 @@ class EngineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             store = ResearchStore(Path(temp))
             with patch("vajra.engine.fetch_source", return_value=fake_source):
-                trace = run_research("measured result study evidence", mode="standard", store=store, search_provider=FakeSearch())
+                trace = run_research("measured result study evidence", mode="fast", store=store, search_provider=FakeSearch())
             self.assertEqual(trace["status"], "completed")
             self.assertTrue(trace["claims"])
             self.assertTrue(all(claim["status"] == "PARTIALLY_VERIFIED" for claim in trace["claims"]))
@@ -46,6 +46,23 @@ class EngineTests(unittest.TestCase):
             self.assertEqual(trace["status"], "failed")
             self.assertEqual(trace["sources"], [])
             self.assertTrue(trace["failures"])
+
+    def test_standard_run_with_one_source_is_marked_partial(self):
+        from vajra.engine import _completion_status
+        self.assertEqual(_completion_status("standard", 1, []), "partial")
+        self.assertEqual(_completion_status("standard", 2, []), "completed")
+        self.assertEqual(_completion_status("fast", 1, []), "completed")
+        self.assertEqual(_completion_status("deep", 0, []), "insufficient_evidence")
+
+    def test_partial_markdown_report_prominently_warns(self):
+        from vajra.engine import _export
+        trace = {"research_id": "a" * 32, "question": "sample question", "timestamp": "now",
+                 "mode": "standard", "status": "partial", "final_synthesis": "One excerpt.",
+                 "sources": [], "audit": {"citation_audit": "passed"}}
+        with tempfile.TemporaryDirectory() as temp:
+            _export(trace, Path(temp))
+            report = (Path(temp) / "reports" / f"{'a' * 32}.md").read_text(encoding="utf-8")
+        self.assertIn("> **Incomplete run:**", report)
 
     def test_audit_detects_tampered_span(self):
         trace = {"sources": [{"source_id": "s", "text": "quote here", "url": "https://example.org"}],

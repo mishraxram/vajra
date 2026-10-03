@@ -31,14 +31,14 @@ def _doctor(store: ResearchStore) -> int:
         from mcp.server import MCPServer  # noqa: F401
         mcp = {"status": "configured", "transport": "stdio"}
     except ImportError:
-        mcp = {"status": "optional_not_installed", "install": "pip install -e '.[mcp]'"}
+        mcp = {"status": "missing_required_dependency", "install": "uv tool install git+https://github.com/mishraxram/vajra.git"}
     checks = {"vajra": {"status": "ok", "version": __version__}, "database": database,
               "search": {"status": search_status, "message": search_message, "network": "not probed"},
               "agent_reach": agent_reach, "mcp": mcp,
               "claim_verification": {"status": "limited", "detail": "Exact passage audit is implemented; source authority/truth not established."},
               "test_status": "not run by doctor"}
-    required_ok = database["status"] == "ok" and search_status == "configured" and agent_reach["status"] == "ok"
-    overall = "AVAILABLE" if required_ok else "DEGRADED"
+    required_ok = database["status"] == "ok" and search_status == "configured" and mcp["status"] == "configured"
+    overall = "CONFIGURED" if required_ok else "DEGRADED"
     print(json.dumps({"overall": overall, "checks": checks}, ensure_ascii=False, indent=2))
     return 0 if database["status"] == "ok" else 2
 
@@ -57,7 +57,7 @@ def _parser() -> argparse.ArgumentParser:
     replay.add_argument("research_id")
     audit = commands.add_parser("audit", help="Audit evidence spans and citation IDs in a saved run")
     audit.add_argument("research_id")
-    commands.add_parser("mcp", help="Run the optional local stdio MCP server")
+    commands.add_parser("mcp", help="Run the local stdio MCP server for compatible AI clients")
     return parser
 
 
@@ -100,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
             from vajra.mcp_server import create_server
             create_server(store).run()
         except ImportError:
-            print("MCP support is optional. Install with: pip install -e '.[mcp]'", file=sys.stderr)
+            print("MCP dependency is missing. Reinstall Vajra: uv tool install git+https://github.com/mishraxram/vajra.git", file=sys.stderr)
             return 2
         return 0
     return 2

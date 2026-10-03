@@ -28,13 +28,13 @@ Vajra should run in coding-agent environments, preserve the installed Agent Reac
 
 ## Final architecture
 
-Python 3.10+ package, stdlib CLI/logging/SQLite and data models, optional pinned DDGS search, bounded `urllib` HTML/text fetching with public-address checks, exact source passages, SQLite run ledger, deterministic JSON/Markdown export, and a pinned official MCP Python SDK v2 stdio adapter. Provider interfaces separate search and Agent Reach health. Source text is stored with retrieval time and SHA-256; evidence records store exact offsets. Candidate claims are verbatim passages and start at `PARTIALLY_VERIFIED`; this status only means source text was captured, not that it is true.
+Python 3.10+ package, stdlib CLI/logging/SQLite and data models, required pinned DDGS search with backend fallback, bounded `urllib` HTML/text fetching with public-address checks, exact source passages, SQLite run ledger, deterministic JSON/Markdown export, and a pinned official MCP Python SDK v2 stdio adapter. Provider interfaces separate search and Agent Reach health. Source text is stored with retrieval time and SHA-256; evidence records store exact offsets. Candidate claims are verbatim passages and start at `PARTIALLY_VERIFIED`; this status only means source text was captured, not that it is true.
 
 The 0.1 research plan is deterministic query expansion, bounded search/fetch, lexical passage ranking, and (in deep modes) a separately worded counterevidence query plus a conservative polarity-overlap candidate flag. It does not use an LLM, entailment classifier, or semantic contradiction judge. No output prose is generated as a factual claim except verbatim attributed passages and fixed audit language.
 
 ## Security, performance, cost, maintenance
 
-- Search is optional and unauthenticated through the pinned DDGS library; providers may rate-limit, change, or fail. Search health means importable, not network-tested.
+- Search is unauthenticated through the pinned DDGS library and retries named public backends when automatic routing errors or returns no hits; providers may still rate-limit, change, or fail. Search health means importable, not network-tested.
 - Fetch accepts HTTP(S), rejects credentials/private/non-global DNS results, revalidates redirects, caps redirect count, bytes, and timeout, and does not execute scripts. DNS can still change between validation and connection (rebinding/TOCTOU); see the threat model. JavaScript-only and PDF sources are unsupported in 0.1.
 - MCP is local stdio only. Tool calls do not expose arbitrary shell, path, or browser-cookie operations. Logs go to stderr. Research MCP calls can access public websites, so hosts must treat tool choice as a network side effect.
 - SQLite uses local app data and transactions; no embeddings/vector DB are justified before measured retrieval needs. No costs are incurred by Vajra itself; network availability, terms, and rate limits depend on DDGS/search backends and websites.
@@ -43,4 +43,3 @@ The 0.1 research plan is deterministic query expansion, bounded search/fetch, le
 ## Rejected alternatives and reassessment triggers
 
 We do not reuse full GPT Researcher, STORM, LangChain Open Deep Research, Firecrawl, Exa, or Tavily runtimes in the core. Their design patterns informed the provider/orchestration boundaries; their dependencies, billing, licensing, operational model, or research-project scope do not justify adoption yet. Reassess after labeled tasks demonstrate a gap that an external dependency closes, after adding JS/PDF support, or before exposing network MCP over HTTP.
-

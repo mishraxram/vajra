@@ -1,59 +1,81 @@
 # VAJRA
 
-**Evidence before answers.** Vajra is a local-first research workbench that records searches, fetched sources, exact evidence passages, claim status, and replayable reports. It keeps discovery separate from verification and marks the limits of what a source proves.
+**Evidence before answers.** A local-first research CLI and MCP server that saves the search trail, fetched sources, exact evidence passages, and an auditable report.
 
-## Current implementation
+[![CI](https://github.com/mishraxram/vajra/actions/workflows/ci.yml/badge.svg)](https://github.com/mishraxram/vajra/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/github/license/mishraxram/vajra)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-- `vajra research QUESTION` runs a bounded search/fetch/evidence workflow, saves its trace in SQLite, and exports a Markdown report plus `research.json`.
-- Search uses the optional DDGS metasearch adapter (`pip install -e ".[search]"`). Search results are leads; only fetched page text enters the evidence ledger.
-- `vajra doctor` checks the database, installed optional search/MCP dependencies, and the installed Agent Reach CLI. Agent Reach channel names and health are read dynamically from `agent-reach doctor --json`.
-- `vajra upstream-check` asks Agent Reach to check for updates without installing them.
-- `vajra replay ID` reconstructs the recorded JSON trace. `vajra audit ID` checks citation IDs and quoted spans against the stored source text.
-- `vajra mcp` starts the optional local stdio MCP server (`pip install -e ".[mcp]"`). The MCP server is read-only apart from running an explicitly requested research job.
-
-`benchmarks/score.py` scores saved traces against a human-adjudicated corpus for exact evidence coverage and trace integrity; it does not score factual truth or semantic entailment. See `benchmarks/README.md`.
+> **Experimental:** search engines and websites can block requests. A passing citation audit verifies that a quote matches fetched text; it does not prove the claim is true. Read [the release audit](RELEASE_AUDIT.md) before using this for consequential decisions.
 
 ## Install and run
 
-### Install the experimental build from GitHub
-
-The source repository is public. This is an early experimental build and is **not production-ready**; search can fail and its evidence excerpts do not verify factual truth.
+Requires Python 3.10 or newer. Install `uv` once, then install VAJRA directly from this public repository:
 
 ```powershell
 python -m pip install uv
-uv tool install --from "git+https://github.com/mishraxram/vajra.git" --with "ddgs==9.16.0" --with "mcp==2.2.0" vajra-research
-uv tool update-shell
+uv tool install git+https://github.com/mishraxram/vajra.git
+```
+
+Restart the terminal if `vajra` is not on `PATH`, then:
+
+```powershell
 vajra doctor
+vajra research "What evidence supports and challenges your research question?" --mode standard
 ```
 
-Restart PowerShell if `vajra` is not found after updating the tool path. Then run:
+The research command prints the report and trace paths. By default, reports are saved in `%LOCALAPPDATA%\Vajra\reports` on Windows and `~/.local/share/vajra/reports` on macOS/Linux. Change the location with `--data-dir PATH` or `VAJRA_DATA_DIR`.
+
+The package installs search and MCP dependencies by default, so the same installation works for the CLI and MCP-compatible AI clients. No API key or paid search account is required. Public search backends may rate-limit or block requests.
+
+## Connect an AI coding agent
+
+VAJRA exposes a local stdio MCP server. Add this server to an MCP-compatible client's MCP configuration (the exact file location varies by client):
+
+```json
+{
+  "mcpServers": {
+    "vajra": {
+      "command": "vajra",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Restart the client and ask it to research a question with Vajra. The server exposes research, replay, audit, and Agent Reach health tools; it does not expose arbitrary shell or local-file access. See [MCP setup and tool details](MCP.md).
+
+## What it does
+
+- Plans bounded primary and counterevidence searches for `fast`, `standard`, `deep`, and `forensic` runs.
+- Tries DDGS automatic search, then DuckDuckGo, Bing, and Brave backends if the previous route errors or returns no hits. Every route and failure is recorded.
+- Fetches candidate public pages with URL, redirect, response-size, and timeout controls; extracts text without running page scripts.
+- Stores fetched text, exact quote offsets, metadata, hashes, query history, failures, and a replayable JSON trace in SQLite.
+- Marks a run `partial` when a query/fetch fails or it collects fewer than the mode's source minimum. It never labels a one-source standard run complete.
+- Dynamically reads Agent Reach's current channels and health. Agent Reach remains upstream-owned; its platform-specific content tools are not replaced by Vajra.
+
+Useful commands:
+
+```text
+vajra doctor
+vajra research "QUESTION" --mode forensic
+vajra audit RESEARCH_ID
+vajra replay RESEARCH_ID
+vajra upstream-check
+```
+
+## Current limits
+
+VAJRA is an evidence collection and citation-audit workbench, not an autonomous truth oracle. It does not yet perform semantic entailment, authoritative-source ranking, independent-source adjudication, or reliable general contradiction resolution. Evidence passages are source assertions. Check the sources yourself, especially for medical, legal, financial, or safety decisions.
+
+Search coverage depends on external public engines and websites. Captchas, rate limits, robots/access controls, network policy, and HTTP 403/429 responses can reduce coverage. Failures are written into the trace and lower the run status. DNS rebinding risk and broader security gaps are documented in [SECURITY.md](SECURITY.md) and [THREAT_MODEL.md](THREAT_MODEL.md).
+
+## Develop and verify
 
 ```powershell
-vajra research "Your actual research question" --mode standard
+python -m pip install uv
+uv sync --frozen
+uv run python -m unittest discover -s tests -v
 ```
 
-The install target is the distribution name `vajra-research`; it installs the `vajra` executable. The optional dependencies enable search and MCP support.
-
-Reports are saved under `%LOCALAPPDATA%\Vajra\reports`. The PyPI package has not been published; this command installs directly from GitHub.
-
-### Install from a local checkout
-
-```powershell
-uv sync --all-extras --frozen
-uv run vajra doctor
-uv run vajra research "What is the current evidence on ...?" --mode standard
-```
-
-`uv.lock` pins the resolved cross-platform dependency set. For a search-only or MCP-only install, replace `--all-extras` with `--extra search` or `--extra mcp`. Plain editable pip installs are also supported, but use the lockfile for reproducible environments.
-
-Agent Reach remains a separately managed upstream capability layer. Install it using its own [official instructions](https://github.com/Panniantong/Agent-Reach/blob/main/docs/install.md). Vajra does not install optional social-platform tools, read browser cookies, or rewrite Agent Reach configuration. Use `agent-reach doctor` and the Agent Reach skill for its platform-specific CLI/MCP integrations.
-
-## Limits
-
-Vajra does not ship a language model. It does not invent or paraphrase factual claims: candidate claims are verbatim, source-attributed passages. `PARTIALLY_VERIFIED` means the quoted text was found in the fetched page; it does **not** establish that the publisher is truthful or that the statement is objectively correct. Search coverage depends on DDGS backends and can fail or change. HTML extraction is intentionally conservative and does not execute JavaScript. Agent Reach is dynamically health-checked but its platform-specific CLI behavior is not wrapped in a generic read API.
-
-Reports are evidence records, not expert or legal/medical/financial advice. Treat all fetched source text as untrusted data.
-
-## Development
-
-Run checks with `uv run --all-extras --frozen python -m unittest discover -s tests -v`. Unit/security tests are offline; the Agent Reach parity and MCP stdio integration checks execute the locally installed Agent Reach doctor, which may probe public endpoints. No paid API is called. See the architecture and audit documents for what has and has not been verified.
+See [architecture](ARCHITECTURE.md), [provider details](PROVIDER_GUIDE.md), [benchmark harness](benchmarks/README.md), [contributing](CONTRIBUTING.md), and [third-party notices](THIRD_PARTY_NOTICES.md).

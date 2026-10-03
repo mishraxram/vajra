@@ -5,8 +5,8 @@ Vajra does not vendor third-party source code. Runtime dependency versions are p
 | Package | Version | License | Role |
 |---|---:|---|---|
 | Agent Reach | 1.5.0 (external install) | MIT | Optional upstream capability/health CLI and skill; not bundled or installed by Vajra. |
-| DDGS | 9.16.0 | MIT | Optional metasearch adapter. |
-| MCP Python SDK (`mcp`) | 2.2.0 | MIT | Optional local stdio MCP server. |
+| DDGS | 9.16.0 | MIT | Required metasearch adapter. |
+| MCP Python SDK (`mcp`) | 2.2.0 | MIT | Required local stdio MCP server. |
 | setuptools | 80.9.0 | MIT | Build backend. |
 | PyJWT | 2.15.1 | MIT | MCP SDK transitive dependency. |
 | annotated-types | 0.8.0 | MIT | Pydantic transitive dependency. |

@@ -23,6 +23,7 @@ from vajra.store import ResearchStore
 logger = logging.getLogger("vajra")
 MODES = {"fast": 1, "standard": 3, "deep": 5, "forensic": 7}
 MAX_FETCHES = {"fast": 3, "standard": 6, "deep": 10, "forensic": 14}
+MIN_SOURCES = {"fast": 1, "standard": 2, "deep": 3, "forensic": 3}
 _NEGATIONS = {"not", "no", "never", "none", "without", "cannot", "can't", "fails", "failed", "false", "doesn't", "isn't"}
 
 
@@ -56,6 +57,14 @@ def _source_id(url: str) -> str:
     return hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
 
 
+def _completion_status(mode: str, source_count: int, failures: list[dict[str, str]]) -> str:
+    if source_count == 0:
+        return "failed" if failures else "insufficient_evidence"
+    if failures or source_count < MIN_SOURCES[mode]:
+        return "partial"
+    return "completed"
+
+
 def _candidate_contradictions(claims: list[dict[str, Any]]) -> list[dict[str, str]]:
     conflicts = []
     for index, left in enumerate(claims):
@@ -87,15 +96,25 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
     queries = plan["queries"]
     search_results: list[dict[str, Any]] = []
     failures: list[dict[str, str]] = []
+    fallbacks: list[dict[str, Any]] = []
     for path_name, path_queries in (("primary", plan["queries"]), ("adversarial", plan["adversarial_queries"])):
         for query in path_queries:
             try:
                 hits = provider.search(query, limit=MODES[mode])
+                attempts = list(getattr(provider, "last_attempts", []))
+                for attempt in attempts:
+                    if attempt.get("backend") != "auto":
+                        fallbacks.append({"path": path_name, "query": query, "provider": provider.name, **attempt})
                 search_results.append({"path": path_name, "query": query, "provider": provider.name,
-                                       "hits": [jsonable(hit) for hit in hits]})
+                                       "attempts": attempts, "hits": [jsonable(hit) for hit in hits]})
             except Exception as exc:
                 logger.warning("%s search failed (%s)", path_name, type(exc).__name__)
+                attempts = list(getattr(provider, "last_attempts", []))
+                for attempt in attempts:
+                    if attempt.get("backend") != "auto":
+                        fallbacks.append({"path": path_name, "query": query, "provider": provider.name, **attempt})
                 failures.append({"stage": "search", "path": path_name, "query": query, "provider": provider.name,
+                                 "attempts": json.dumps(attempts, ensure_ascii=False),
                                  "error": f"{type(exc).__name__}: {exc}"})
     unique_hits = {}
     for search in search_results:
@@ -139,7 +158,7 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
     evidence.sort(key=lambda item: (-item["relevance"], item["evidence_id"]))
     claims.sort(key=lambda item: item["claim_id"])
     contradictions = _candidate_contradictions(claims) if mode in {"deep", "forensic"} else []
-    status = "completed" if sources else ("failed" if failures else "insufficient_evidence")
+    status = _completion_status(mode, len(sources), failures)
     trace: dict[str, Any] = {"schema_version": "1.0", "research_id": research_id, "question": question, "timestamp": stamp,
         "mode": mode, "status": status, "plan": plan,
         "providers": [{"name": provider.name, "role": "search", "state": "used" if search_results else "failed"},
@@ -150,7 +169,7 @@ def run_research(question: str, mode: str = "standard", *, store: ResearchStore 
             "checks": ["source fetched", "passage extracted from source text"], "limitations": ["source authority and factual truth not verified"]} for c in claims],
         "citations": [{"source_id": src["source_id"], "url": src["url"], "title": src["title"], "author": src["author"], "publisher": src["publisher"],
                        "published_at": src["published_at"], "retrieved_at": src["retrieved_at"], "content_hash": src["content_hash"]} for src in sources],
-        "fallbacks": [], "failures": failures, "final_synthesis": _synthesize(question, claims, sources, evidence, failures),
+        "fallbacks": fallbacks, "failures": failures, "final_synthesis": _synthesize(question, claims, sources, evidence, failures),
         "audit": {"citation_audit": "passed" if _audit_records(sources, evidence, claims)["valid"] else "failed",
                   "source_count": len(sources), "evidence_count": len(evidence), "claim_count": len(claims),
                   "unsupported_claims": 0, "notes": ["Candidate claims are source excerpts, not model-generated factual assertions.",
@@ -245,6 +264,8 @@ def _export(trace: dict[str, Any], output_dir: Path) -> None:
     citation_index = {src["source_id"]: src for src in trace.get("sources", [])}
     lines = [f"# Research: {_escape_markdown(trace['question'])}", "", f"- Run: `{rid}`", f"- Time: {trace['timestamp']}",
              f"- Mode: {trace['mode']}", f"- Status: {trace['status']}", "", trace["final_synthesis"], "", "## Sources"]
+    if trace["status"] in {"partial", "failed", "insufficient_evidence"}:
+        lines[6:7] = ["", "> **Incomplete run:** Treat this report as preliminary. Review the recorded failures and search attempts in the JSON trace before relying on it.", ""]
     for src in citation_index.values():
         title = (src["title"] or src["url"]).replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]").replace("(", "\\(").replace(")", "\\)")
         safe_url = quote(src["url"], safe=":/?&=#%+,-._~@")

@@ -7,7 +7,7 @@ Research planner and bounded run loop
     |                    |
 SearchProvider       AgentReachProvider (health/capabilities)
     |                    |
-DDGS (optional)      agent-reach doctor --json (upstream-owned)
+DDGS (required)      agent-reach doctor --json (upstream-owned)
     |
 Safe fetch + conservative HTML/text extraction
     |
@@ -21,4 +21,3 @@ SQLite run ledger -> research.json + Markdown report
 Search snippets only identify URLs. They are not stored as evidence. Fetch rechecks the URL, follows a bounded number of validated redirects, limits body size and time, and extracts HTML text without executing JavaScript. Evidence spans are exact character offsets into normalized extracted text. The audit checks the offsets and link graph. Publisher reliability, authorship, source independence, and factual truth are not decided by the current implementation.
 
 For detailed tradeoffs and research citations see [ARCHITECTURE_DECISION.md](ARCHITECTURE_DECISION.md). The upstream capability map is [AGENT_REACH_COMPATIBILITY.md](AGENT_REACH_COMPATIBILITY.md).
-

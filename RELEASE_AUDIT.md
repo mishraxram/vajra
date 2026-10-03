@@ -48,3 +48,14 @@ Keep the release blocked until the missing research-verification and provider-ro
 | Doctor interpretation | PASS, limited | Fresh install reported `overall: CONFIGURED`, with database, DDGS, and MCP configured. The separately reported Agent Reach health subprocess timed out; search network remains unprobed by `doctor`. |
 
 This follow-up verifies a convenient experimental GitHub install. It does not change the production-readiness decision above, publish a PyPI package, or qualify the project for consequential use.
+
+## Cross-agent install and branding follow-up (2026-10-04)
+
+| Area | Status | Evidence |
+|---|---|---|
+| Portable agent skill | PASS | `.agents/skills/vajra-research/SKILL.md` passed the skill validator. The published source was fetched with `npx skills` and the skill installer found exactly one VAJRA skill, then installed it into all 79 supported agent targets in an isolated scratch project. Shared client locations resulted in 55 unique directories. No global user-agent folders were modified during this test. |
+| Skill workflow | PASS, limited | The skill directs agents to invoke the actual CLI or MCP tools, preserve run status, and run citation audit. The CLI/MCP workflow was separately exercised in the 0.2.0 installability follow-up above. A skill is instructions; it does not itself install the VAJRA executable. |
+| Client configuration examples | PASS, syntax only | JSON snippets in `AGENT_INTEGRATIONS.md` parsed successfully. OpenCode, Codex CLI, Claude Code, VS Code/Copilot, and Cursor setup instructions are documented. Native client registration was not performed on this machine. |
+| Repository identity | PASS | Added the original VAJRA emblem at `assets/vajra-mark.png` and placed it in the public README. This is README branding; no repository social-preview upload was configured. |
+
+Compatibility is broad rather than literally universal: clients need Agent Skills support for the shared skill or stdio MCP support for the live tools. Each client's native configuration is different; follow the linked setup and confirm the client reports VAJRA connected.

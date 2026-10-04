@@ -96,5 +96,5 @@ class ResearchStore:
         return json.loads(row[0]) if row else None
 
     def count_runs(self) -> int:
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             return int(db.execute("SELECT count(*) FROM runs").fetchone()[0])

@@ -7,6 +7,11 @@ from vajra.providers.search import DDGSSearchProvider
 
 
 class SearchFallbackTests(unittest.TestCase):
+    def test_parser_accepts_iterable_rows(self):
+        provider = DDGSSearchProvider(timeout=1)
+        rows = iter([{"href": "https://example.org/source", "title": "A source", "body": "snippet"}])
+        self.assertEqual(provider._hits(rows, "duckduckgo")[0].url, "https://example.org/source")
+
     def test_falls_back_to_direct_engine_and_records_route(self):
         calls = []
 

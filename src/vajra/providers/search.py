@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import Protocol
 
 from vajra.models import SearchHit
@@ -25,7 +26,7 @@ class DDGSSearchProvider:
             import ddgs  # noqa: F401
         except ImportError:
             return "unavailable", "Install Vajra with its standard dependencies or install ddgs."
-            return "configured", "Free public search is ready; no API key or paid account is required. Network is checked when a search runs."
+        return "configured", "Free public search is ready; no API key or paid account is required. Network is checked when a search runs."
 
     def search(self, query: str, limit: int = 5) -> list[SearchHit]:
         try:
@@ -62,7 +63,9 @@ class DDGSSearchProvider:
     def _hits(self, rows: object, backend: str) -> list[SearchHit]:
         hits: list[SearchHit] = []
         seen: set[str] = set()
-        for row in rows or []:  # type: ignore[union-attr]
+        if not isinstance(rows, Iterable) or isinstance(rows, (str, bytes, dict)):
+            return hits
+        for row in rows:
             if not isinstance(row, dict):
                 continue
             url = str(row.get("href") or row.get("url") or "").strip()

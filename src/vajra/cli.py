@@ -7,6 +7,7 @@ import os
 import sys
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 from vajra import __version__
 from vajra.engine import MODES, audit_trace, run_research
@@ -19,7 +20,7 @@ def _store(path: str | None) -> ResearchStore:
     return ResearchStore(Path(path) if path else None)
 
 
-def _doctor_report(store: ResearchStore, *, include_agent_reach: bool = True) -> dict:
+def _doctor_report(store: ResearchStore, *, include_agent_reach: bool = True) -> dict[str, Any]:
     agent_reach = (AgentReachProvider().capabilities() if include_agent_reach else
                    {"status": "not_checked", "message": "Run `vajra doctor` to inspect Agent Reach."})
     search_status, search_message = DDGSSearchProvider().health()
@@ -71,7 +72,7 @@ def _show_banner() -> None:
 
 
 def _run_research(question: str, mode: str, store: ResearchStore, *, as_json: bool = False,
-                  show_banner: bool = True, external_sources: list[dict] | None = None) -> int:
+                  show_banner: bool = True, external_sources: list[dict[str, Any]] | None = None) -> int:
     if show_banner and sys.stdout.isatty():
         _show_banner()
     try:

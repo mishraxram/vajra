@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import ipaddress
-import socket
 import re
+import socket
 import unicodedata
 from urllib.parse import urlsplit
 
@@ -56,7 +56,8 @@ def validate_public_http_url(url: str) -> str:
         addresses = []
         for answer in answers:
             try:
-                addresses.append(ipaddress.ip_address(answer[4][0].split("%", 1)[0]))
+                address_text = str(answer[4][0]).split("%", 1)[0]
+                addresses.append(ipaddress.ip_address(address_text))
             except ValueError as exc:
                 raise UnsafeURLError("Host returned an invalid address") from exc
     if not addresses or any(not address.is_global for address in addresses):

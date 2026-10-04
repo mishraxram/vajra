@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  offline-tests:
+  release-stabilization:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
         python-version: ['3.10', '3.13']
     runs-on: ${{ matrix.os }}
     steps:
@@ -19,5 +19,29 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-      - run: uv sync --frozen
-      - run: uv run --frozen python -m unittest discover -s tests -v
+      - name: Install locked runtime and development dependencies
+        run: uv sync --frozen --all-groups
+      - name: Ruff lint
+        run: uv run --frozen ruff check src tests scripts
+      - name: Type check production package
+        run: uv run --frozen mypy
+      - name: Pytest with branch coverage
+        run: uv run --frozen coverage run -m pytest -v --junitxml=pytest-results.xml
+      - name: Enforce production coverage threshold
+        run: uv run --frozen coverage report --fail-under=80
+      - name: Confirm unittest discovery agrees
+        run: uv run --frozen python -m unittest discover -s tests -v
+      - name: Build and smoke-test installed wheel CLI and MCP
+        run: uv run --frozen python scripts/smoke_installed_wheel.py
+      - name: Export coverage report
+        if: always()
+        run: uv run --frozen coverage xml -o coverage.xml
+      - name: Preserve test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: test-coverage-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            pytest-results.xml
+            coverage.xml
+          if-no-files-found: warn

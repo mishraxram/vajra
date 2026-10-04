@@ -1,0 +1,150 @@
+{
+  "revision": "bafad95",
+  "branch": "phase-1-stabilization",
+  "working_tree": "clean before Phase 0 artifacts",
+  "inventory": {
+    "tracked_files": 53,
+    "python_files": 23,
+    "production_python_files": 13,
+    "production_python_lines": 1431,
+    "test_files": 9
+  },
+  "environment": {
+    "os": "Windows",
+    "python": "3.13",
+    "runtime_dependencies": {
+      "ddgs": "9.16.0",
+      "mcp": "2.2.0"
+    }
+  },
+  "commands": {
+    "unittest": {
+      "command": "uv run --frozen python -m unittest discover -s tests -v",
+      "status": "passed",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "duration_seconds": 29.426
+    },
+    "doctor": {
+      "command": "uv run --frozen vajra doctor",
+      "status": "failed",
+      "exit_code": 1,
+      "failure": "TypeError: cannot unpack non-iterable NoneType object"
+    },
+    "pytest": {
+      "command": "uv run --frozen python -m pytest -q",
+      "status": "unavailable",
+      "reason": "No module named pytest"
+    },
+    "ruff": {
+      "command": "uv run --frozen ruff --version",
+      "status": "unavailable",
+      "reason": "ruff executable not installed"
+    },
+    "mypy": {
+      "command": "uv run --frozen mypy --version",
+      "status": "unavailable",
+      "reason": "mypy executable not installed"
+    },
+    "coverage": {
+      "command": "uv run --frozen coverage --version",
+      "status": "unavailable",
+      "reason": "coverage executable not installed"
+    },
+    "wheel_smoke": {
+      "status": "not_implemented",
+      "reason": "No isolated installed-wheel smoke script or CI step exists"
+    },
+    "benchmark": {
+      "status": "not_run",
+      "reason": "No reproducible benchmark command was part of the release-stabilization baseline checks"
+    }
+  },
+  "confirmed_findings": [
+    "DDGSSearchProvider.health() returns None when ddgs is importable, crashing doctor",
+    "unittest suite passes, while pytest and installed-wheel CLI/MCP smoke are not configured",
+    "AgentReachProvider is health/update-check only and does not perform content research",
+    "engine ranking and exact-span audit do not establish source authority or factual truth",
+    "SQLite files have no explicit owner-only permission or encryption controls"
+  ],
+  "post_phase1": {
+    "environment": {
+      "os": "Windows",
+      "python": "3.13.15",
+      "uv_locked_dev_tools": {
+        "coverage": "7.16.2",
+        "mypy": "2.4.0",
+        "pytest": "9.1.1",
+        "ruff": "0.16.10"
+      }
+    },
+    "commands": {
+      "pytest": {
+        "command": "uv run --frozen coverage run -m pytest -v --junitxml=pytest-results.xml",
+        "status": "passed",
+        "tests": 50,
+        "subtests": 21,
+        "failures": 0,
+        "duration_seconds": 31.43
+      },
+      "pytest_module": {
+        "command": "uv run --frozen python -m pytest -v",
+        "status": "passed",
+        "tests": 50,
+        "subtests": 21,
+        "failures": 0,
+        "duration_seconds": 30.64
+      },
+      "coverage": {
+        "command": "uv run --frozen coverage report --fail-under=80",
+        "status": "passed",
+        "production_package_percent": 82,
+        "statements": 1049,
+        "missed": 155,
+        "branches": 318,
+        "partial_branches": 71
+      },
+      "unittest": {
+        "command": "uv run --frozen python -m unittest discover -s tests -v",
+        "status": "passed",
+        "tests": 50,
+        "failures": 0,
+        "errors": 0,
+        "duration_seconds": 29.448
+      },
+      "ruff": {
+        "command": "uv run --frozen ruff check src tests scripts",
+        "status": "passed",
+        "result": "All checks passed"
+      },
+      "mypy": {
+        "command": "uv run --frozen mypy",
+        "status": "passed",
+        "checked_production_files": 13,
+        "issues": 0
+      },
+      "wheel_smoke": {
+        "command": "uv run --frozen python scripts/smoke_installed_wheel.py",
+        "status": "passed",
+        "checks": [
+          "fresh wheel build and isolated installation",
+          "installed import with PYTHONPATH removed",
+          "vajra --help",
+          "vajra welcome",
+          "vajra doctor in an isolated home without Agent Reach on PATH",
+          "vajra research --help",
+          "MCP server construction and tool listing"
+        ]
+      },
+      "doctor": {
+        "command": "uv run --frozen vajra doctor",
+        "status": "passed",
+        "exit_code": 0,
+        "overall": "CONFIGURED",
+        "local_agent_reach": "5/16 channels healthy (environment-specific)"
+      }
+    },
+    "ci_matrix": "Configured for Windows, Linux, and macOS on Python 3.10 and 3.13; remote CI matrix has not run in this local session."
+  }
+}
